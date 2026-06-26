@@ -30,7 +30,10 @@ export const activeModel = derived(
 );
 
 export function addModel(model) {
-  savedModels.update(models => [...models, { ...model, id: 'model_' + Date.now() }]);
+  const newModel = { ...model, id: 'model_' + Date.now() };
+  savedModels.update(models => [...models, newModel]);
+  activeModelId.set(newModel.id);
+  return newModel;
 }
 
 export function removeModel(modelId) {
