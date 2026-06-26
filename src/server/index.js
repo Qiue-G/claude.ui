@@ -782,8 +782,7 @@ wss.on('connection', (ws, req) => {
         console.log('[INPUT] message length: ' + (message.data ? message.data.length : 0));
 
         wsProcCount.set(sessionId, (wsProcCount.get(sessionId) || 0) + 1);
-        const promptText = typeof message.data === 'string' ? message.data : (message.data.text || '');
-        const proc = await spawnCli(session, promptText);
+        const proc = await spawnCli(session, message.data);
         sessionProcesses.set(sessionId, proc);
 
         proc.stdout.on('data', (chunk) => {
