@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve as pathResolve } from 'path';
-
+import { spawn } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import { fileURLToPath } from 'url';
 import { dirname as pathDirname } from 'path';
@@ -35,6 +35,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const WORKSPACE_DIR = process.env.WORKSPACE_DIR || join(__dirname, '../../workspace');
 const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS || '10');
+const FREE_CODE_DIR = process.env.FREE_CODE_DIR || '/free-code';
 const CONFIG_PATH = process.env.AGENT_CONFIG_PATH || join(process.cwd(), 'agent-config.json');
 const VERSION = '7.3.1';
 
@@ -98,6 +99,7 @@ setInterval(() => {
 
 const sessions = new Map();
 const sessionProcesses = new Map();
+const sessionProxies = new Map(); // proxy processes
 const wsProcCount = new Map();    // active process count per session
 const sessionClients = new Map(); // sessionId → WebSocket (for model health push)
 
@@ -168,115 +170,105 @@ function maskSensitive(text, apiKey) {
   return text.split(apiKey).join(masked);
 }
 
-// ===== Direct provider API streaming (replaces CLI + proxy) =====
-async function* streamFromProvider(session, inputText) {
-  const { provider, model, apiKey } = session;
+async function startProxy(session) {
+  const proxyPath = join(FREE_CODE_DIR, 'or_proxy.mjs');
+  const model = session.provider === 'openrouter'
+    ? resolveOpenRouterModel(session.model || DEFAULTS.model)
+    : (session.model || DEFAULTS.model || 'deepseek-chat');
+  const fallback = getFallbackModel(session.provider);
+  console.log('[PROXY] starting or_proxy.mjs --model ' + model + (fallback ? ' --fallback-model ' + fallback : ''));
 
-  let url, headers, body;
-  const isAnthropic = provider === 'anthropic';
-
-  if (isAnthropic) {
-    url = 'https://api.anthropic.com/v1/messages';
-    headers = {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    };
-    body = JSON.stringify({
-      model: model || 'claude-sonnet-4-20250514',
-      max_tokens: 8192,
-      messages: [{ role: 'user', content: inputText }],
-      stream: true
-    });
-  } else if (provider === 'openai') {
-    url = 'https://api.openai.com/v1/chat/completions';
-    headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey
-    };
-    body = JSON.stringify({
-      model: model || 'gpt-4o',
-      messages: [{ role: 'user', content: inputText }],
-      stream: true
-    });
-  } else if (provider === 'deepseek') {
-    url = 'https://api.deepseek.com/v1/chat/completions';
-    headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey
-    };
-    body = JSON.stringify({
-      model: model || 'deepseek-chat',
-      messages: [{ role: 'user', content: inputText }],
-      stream: true
-    });
-  } else {
-    // openrouter (default)
-    url = 'https://openrouter.ai/api/v1/chat/completions';
-    headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey,
-      'HTTP-Referer': 'https://github.com/Qiue-G/claude.ui',
-      'X-Title': 'Claude UI'
-    };
-    const resolvedModel = resolveOpenRouterModel(model || DEFAULTS.model);
-    const fallbackModel = getFallbackModel(provider);
-    const models = fallbackModel && fallbackModel !== resolvedModel
-      ? [resolvedModel, fallbackModel]
-      : [resolvedModel];
-    body = JSON.stringify({
-      model: resolvedModel,
-      models: models,
-      messages: [{ role: 'user', content: inputText }],
-      stream: true
-    });
+  const proxyArgs = [proxyPath, '--model', model];
+  if (session.provider === 'deepseek') {
+    proxyArgs.push('--base-url', 'https://api.deepseek.com/v1');
+  }
+  if (fallback && fallback !== model) {
+    proxyArgs.push('--fallback-model', fallback);
   }
 
-  const response = await fetch(url, { method: 'POST', headers, body });
+  const proxy = spawn('node', proxyArgs, {
+    cwd: session.dir,
+    env: { ...process.env, ANTHROPIC_API_KEY: session.apiKey, NODE_ENV: 'production' },
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(provider + ' API ' + response.status + ': ' + errText.substring(0, 300));
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
-
-      try {
-        const parsed = JSON.parse(data);
-        let text = '';
-
-        if (isAnthropic) {
-          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-            text = parsed.delta.text;
-          }
-        } else {
-          const choice = parsed.choices?.[0];
-          if (choice?.delta?.content) {
-            text = choice.delta.content;
-          }
-        }
-
-        if (text) yield text;
-      } catch (e) {
-        // skip unparseable SSE events
+  let proxyOutput = '';
+  const portPromise = new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('Proxy startup timeout')), 10000);
+    proxy.stdout.on('data', (chunk) => {
+      proxyOutput += chunk.toString();
+      const portMatch = proxyOutput.match(/(\d{4,5})/);
+      if (portMatch) {
+        clearTimeout(t);
+        resolve(parseInt(portMatch[1], 10));
       }
-    }
+    });
+    proxy.stderr.on('data', (chunk) => {
+      const text = chunk.toString().trim();
+      console.error('[PROXY stderr] ' + text);
+
+      // Parse model health events from proxy v5
+      // "→ modelX" / "→ modelX [retry 1/2]" → retrying
+      const switchingMatch = text.match(/\[proxy\] →\s+(\S+)/);
+      if (switchingMatch) {
+        session.modelHealth = 'retrying';
+      }
+      // "✓ modelX" → live
+      const liveMatch = text.match(/\[proxy\] ✓\s+(\S+)/);
+      if (liveMatch) {
+        session.currentModel = liveMatch[1];
+        session.modelHealth = 'ok';
+        recordModelSuccess(liveMatch[1]);
+        notifyModelUpdate(session);
+      }
+      // "✗ all failed ... → code" → error
+      if (text.includes('[proxy] ✗ all failed')) {
+        session.modelHealth = 'error';
+        const codeMatch = text.match(/→\s*(\S+)$/);
+        const errCode = codeMatch ? codeMatch[1] : 'unknown';
+        recordModelFail(session.currentModel || session.model, errCode);
+        notifyModelUpdate(session);
+      }
+    });
+    proxy.on('error', (e) => { clearTimeout(t); reject(e); });
+    proxy.on('close', (c) => { clearTimeout(t); reject(new Error('Proxy exited ' + c)); });
+  });
+
+  const port = await portPromise;
+  console.log('[PROXY] listening on port ' + port);
+  return { process: proxy, port };
+}
+
+async function spawnCli(session, prompt) {
+  const cliPath = join(FREE_CODE_DIR, 'cli-dev');
+  const cliArgs = ['-p', '--bare'];
+  if (session.model) cliArgs.push('--model', session.model);
+
+  const env = {
+    HOME: session.dir,
+    ...process.env,
+    ANTHROPIC_API_KEY: session.apiKey,
+    NODE_ENV: 'production'
+  };
+
+  // For OpenRouter: start proxy and point CLI at it
+  if (session.provider === 'openrouter' || session.provider === 'deepseek') {
+    const { process: proxy, port } = await startProxy(session);
+    sessionProxies.set(session.id, proxy);
+    env.ANTHROPIC_BASE_URL = 'http://127.0.0.1:' + port;
+    console.log('[CLI] ANTHROPIC_BASE_URL=' + env.ANTHROPIC_BASE_URL);
   }
+
+  const proc = spawn(cliPath, cliArgs, {
+    cwd: session.dir,
+    env,
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+
+  proc.stdin.write(prompt + '\n');
+  proc.stdin.end();
+
+  return proc;
 }
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -373,6 +365,8 @@ app.delete('/api/session/:id', async (req, res) => {
     if (!csrfToken || csrfToken !== session.csrfToken) return res.status(403).json({ error: 'CSRF token missing or invalid' });
     const oldProc = sessionProcesses.get(req.params.id);
     if (oldProc) { oldProc.kill(); sessionProcesses.delete(req.params.id); }
+    const oldProxy = sessionProxies.get(req.params.id);
+    if (oldProxy) { oldProxy.kill(); sessionProxies.delete(req.params.id); }
     sessions.delete(req.params.id);
   }
   res.json({ success: true });
@@ -442,11 +436,13 @@ app.get('/api/health/detailed', (req, res) => {
 
   const sessionList = [];
   for (const [sid, s] of sessions) {
+    const proxyAlive = sessionProxies.has(sid);
     sessionList.push({
       sessionId: sid,
       model: s.currentModel || s.model,
       health: s.modelHealth,
       provider: s.provider,
+      proxyAlive,
       createdAt: s.createdAt
     });
   }
@@ -530,35 +526,56 @@ app.post('/api/input', async (req, res) => {
 
   wsProcCount.set(sessionId, (wsProcCount.get(sessionId) || 0) + 1);
 
-  let hasContent = false;
-  const modelId = session.currentModel || session.model;
+  try {
+    const proc = await spawnCli(session, inputText);
+    sessionProcesses.set(sessionId, proc);
 
-  (async () => {
-    try {
-      for await (const text of streamFromProvider(session, inputText)) {
-        hasContent = true;
-        const clean = stripAnsi(text);
-        if (clean) res.write('data: ' + clean + '\n\n');
+    proc.stdout.on('data', (chunk) => {
+      let clean = stripAnsi(chunk.toString());
+      clean = maskSensitive(clean, session.apiKey);
+      if (clean.trim()) {
+        const lines = clean.split('\n');
+        for (const line of lines) {
+          if (line) res.write('data: ' + line + '\n\n');
+        }
       }
-      if (!hasContent) {
-        res.write('data: 模型未返回响应，请检查 API Key 和模型配置\n\n');
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      let errStr = chunk.toString();
+      errStr = maskSensitive(errStr, session.apiKey);
+      console.error('[STDERR] ' + maskSensitive(errStr.substring(0, 200), session.apiKey));
+      if (errStr.trim()) {
+        const lines = errStr.split('\n');
+        for (const line of lines) {
+          if (line) res.write('event: stderr\ndata: ' + line + '\n\n');
+        }
       }
-      recordModelSuccess(modelId);
-      session.modelHealth = 'ok';
-      notifyModelUpdate(session);
-      res.write('event: done\ndata: 0\n\n');
-      res.end();
-    } catch (err) {
-      console.error('[INPUT] Error:', err.message);
-      recordModelFail(modelId, err.message.substring(0, 100));
-      session.modelHealth = 'error';
-      notifyModelUpdate(session);
-      res.write('event: error\ndata: ' + (err.message || 'Internal server error') + '\n\n');
-      res.end();
-    } finally {
+    });
+
+    proc.on('close', (code) => {
       wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
-    }
-  })();
+      sessionProcesses.delete(sessionId);
+      const proxy = sessionProxies.get(sessionId);
+      if (proxy) { proxy.kill(); sessionProxies.delete(sessionId); }
+      console.log('[DONE] exit code ' + code);
+      res.write('event: done\ndata: ' + code + '\n\n');
+      res.end();
+    });
+
+    proc.on('error', (err) => {
+      console.error('[ERROR] ' + err.message);
+      wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
+      res.write('event: error\ndata: Failed to start CLI\n\n');
+      res.end();
+    });
+
+  } catch (error) {
+    console.error('[INPUT] Error:', error);
+    wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
+    res.write('event: error\ndata: ' + (error.message || 'Internal server error') + '\n\n');
+    res.end();
+  }
 });
 
 
@@ -783,47 +800,58 @@ wss.on('connection', (ws, req) => {
           return;
         }
 
+        const oldProc = sessionProcesses.get(sessionId);
+        if (oldProc) oldProc.kill();
+
         // Normalize input: client may send { type:'input', data:{ text:"..." } } or { type:'input', data:"plain string" }
         const inputText = typeof message.data === 'string' ? message.data : (message.data?.text || '');
 
         console.log('[INPUT] message length: ' + inputText.length);
 
         wsProcCount.set(sessionId, (wsProcCount.get(sessionId) || 0) + 1);
-        const modelId = session.currentModel || session.model;
+        const proc = await spawnCli(session, inputText);
+        sessionProcesses.set(sessionId, proc);
 
-        (async () => {
-          let hasContent = false;
-          try {
-            for await (const text of streamFromProvider(session, inputText)) {
-              hasContent = true;
-              const clean = stripAnsi(text);
-              if (clean && ws.readyState === ws.OPEN) {
-                const MAX_WS_MSG = 1024 * 1024;
-                const data = clean.length > MAX_WS_MSG ? clean.substring(0, MAX_WS_MSG) + '\n[output truncated]' : clean;
-                ws.send(JSON.stringify({ type: 'output', data }));
-              }
-            }
-            if (!hasContent && ws.readyState === ws.OPEN) {
-              ws.send(JSON.stringify({ type: 'output', data: '模型未返回响应，请检查 API Key 和模型配置' }));
-            }
-            recordModelSuccess(modelId);
-            session.modelHealth = 'ok';
-            notifyModelUpdate(session);
-            if (ws.readyState === ws.OPEN) {
-              ws.send(JSON.stringify({ type: 'exit', code: 0 }));
-            }
-          } catch (err) {
-            console.error('[WS ERROR] ' + err.message);
-            recordModelFail(modelId, err.message.substring(0, 100));
-            session.modelHealth = 'error';
-            notifyModelUpdate(session);
-            if (ws.readyState === ws.OPEN) {
-              ws.send(JSON.stringify({ type: 'error', message: err.message }));
-            }
-          } finally {
-            wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
+        proc.stdout.on('data', (chunk) => {
+          let clean = stripAnsi(chunk.toString());
+          clean = maskSensitive(clean, session.apiKey);
+          if (clean.trim() && ws.readyState === ws.OPEN) {
+            const MAX_WS_MSG = 1024 * 1024; // 1MB
+            const data = clean.length > MAX_WS_MSG ? clean.substring(0, MAX_WS_MSG) + '\n[output truncated]' : clean;
+            ws.send(JSON.stringify({ type: 'output', data }));
           }
-        })();
+        });
+
+        proc.stderr.on('data', (chunk) => {
+          let errStr = chunk.toString();
+          errStr = maskSensitive(errStr, session.apiKey);
+          console.error('[STDERR] ' + maskSensitive(errStr.substring(0, 200), session.apiKey));
+          if (ws.readyState === ws.OPEN) {
+            const MAX_WS_ERR = 1024 * 1024; // 1MB
+            const data = errStr.length > MAX_WS_ERR ? errStr.substring(0, MAX_WS_ERR) + '\n[output truncated]' : errStr;
+            ws.send(JSON.stringify({ type: 'stderr', data }));
+          }
+        });
+
+        proc.on('close', (code) => {
+          console.log('[DONE] exit code ' + code);
+          sessionProcesses.delete(sessionId);
+          wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
+          // Kill proxy too
+          const proxy = sessionProxies.get(sessionId);
+          if (proxy) { proxy.kill(); sessionProxies.delete(sessionId); }
+          if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify({ type: 'exit', code }));
+          }
+        });
+
+        proc.on('error', (err) => {
+          console.error('[ERROR] ' + err.message);
+          wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
+          if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Failed to start CLI' }));
+          }
+        });
       }
 
     } catch (error) {
@@ -845,6 +873,8 @@ wss.on('connection', (ws, req) => {
     }
     const proc = sessionProcesses.get(sessionId);
     if (proc) { proc.kill(); sessionProcesses.delete(sessionId); }
+    const proxy = sessionProxies.get(sessionId);
+    if (proxy) { proxy.kill(); sessionProxies.delete(sessionId); }
   });
 });
 
@@ -880,6 +910,8 @@ setInterval(() => {
     if (now - session.lastActivity > SESSION_TIMEOUT) {
       const proc = sessionProcesses.get(id);
       if (proc) { try { proc.kill(); } catch (e) {} sessionProcesses.delete(id); }
+      const proxy = sessionProxies.get(id);
+      if (proxy) { try { proxy.kill(); } catch (e) {} sessionProxies.delete(id); }
       sessions.delete(id);
       sessionClients.delete(id);
       wsProcCount.delete(id);
