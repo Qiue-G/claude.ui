@@ -148,7 +148,7 @@
     bind:this={modalEl}
     class="modal-overlay"
     role="presentation"
-    on:click={handleBackdropClick}
+    on:mousedown={handleBackdropClick}
     transition:fade={{ duration: 150 }}
   >
     <div
@@ -161,6 +161,8 @@
       style="max-width: {width}"
       transition:fly={{ y: 20, duration: 200 }}
       on:click|stopPropagation
+      on:mousedown|stopPropagation
+      on:touchstart|stopPropagation
       on:keydown|stopPropagation
     >
       {#if title}
