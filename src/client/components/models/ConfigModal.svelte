@@ -16,7 +16,7 @@
     provider: 'openrouter',
     model: '',
     apiKey: ''
-  };
+  });
   let availableModels = [];
   let loadingModels = false;
   let customModel = false;
