@@ -208,12 +208,16 @@ export async function sendInput(data) {
     let buffer = '';
     let eventType = 'message';
     let dataLines = [];
+    let hasContent = false;
 
     function flushEvent() {
       const content = dataLines.join('\n');
       dataLines = [];
       switch (eventType) {
         case 'done':
+          if (!hasContent) {
+            addMessage('system', '模型未返回响应，请检查 API Key 和模型配置');
+          }
           isWaiting.set(false);
           isTyping.set(false);
           break;
@@ -223,10 +227,10 @@ export async function sendInput(data) {
           if (content) addMessage('system', stripAnsi(content));
           break;
         case 'stderr':
-          if (content) appendToLastAssistant(stripAnsi(content));
+          if (content) { appendToLastAssistant(stripAnsi(content)); hasContent = true; }
           break;
         default:
-          if (content) appendToLastAssistant(stripAnsi(content));
+          if (content) { appendToLastAssistant(stripAnsi(content)); hasContent = true; }
       }
       eventType = 'message';
     }
