@@ -36,7 +36,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const WORKSPACE_DIR = process.env.WORKSPACE_DIR || join(__dirname, '../../workspace');
 const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS || '10');
 const FREE_CODE_DIR = process.env.FREE_CODE_DIR || '/free-code';
-const CONFIG_PATH = process.env.AGENT_CONFIG_PATH || join(FREE_CODE_DIR, 'agent-config.json');
+const CONFIG_PATH = process.env.AGENT_CONFIG_PATH || join(process.cwd(), 'agent-config.json');
 const VERSION = '7.3.1';
 
 // ===== Load agent config =====
@@ -274,10 +274,16 @@ async function spawnCli(session, prompt) {
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : [
-      'https://claudefree-production.up.railway.app',
+      /^https?:\/\/.*\.up\.railway\.app$/,
       'http://localhost:3000',
+      'http://localhost:5173',
       'http://127.0.0.1:3000',
     ];
+
+function isOriginAllowed(origin) {
+  if (!origin) return false;
+  return ALLOWED_ORIGINS.some(o => (o instanceof RegExp) ? o.test(origin) : o === origin);
+}
 
 const app = express();
 
@@ -298,9 +304,12 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// Strict CORS
+// Strict CORS (supports regex patterns in ALLOWED_ORIGINS)
 app.use(cors({
-  origin: ALLOWED_ORIGINS,
+  origin: function(origin, callback) {
+    if (!origin || isOriginAllowed(origin)) callback(null, true);
+    else callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   maxAge: 86400,
 }));
@@ -707,7 +716,7 @@ const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
 wss.on('connection', (ws, req) => {
   // Verify WebSocket origin
   const wsOrigin = req.headers.origin;
-  if (wsOrigin && !ALLOWED_ORIGINS.includes(wsOrigin)) {
+  if (wsOrigin && !isOriginAllowed(wsOrigin)) {
     ws.send(JSON.stringify({ type: 'error', message: 'WebSocket origin not allowed' }));
     ws.close();
     return;
