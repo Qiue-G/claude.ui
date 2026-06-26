@@ -55,6 +55,12 @@ function connectWebSocketProtocol(sid, token, autoReconnect) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+    // Send init message to associate WebSocket with session
+    ws.send(JSON.stringify({
+      type: 'init',
+      sessionId: sid,
+      token: token
+    }));
   };
 
   ws.onmessage = (event) => {
