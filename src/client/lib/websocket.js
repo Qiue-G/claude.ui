@@ -2,7 +2,7 @@
  * WebSocket Manager - handles real-time communication with server
  * Supports both WebSocket and SSE for streaming responses
  */
-import { isConnected, connectionStatus, sessionId, sessionToken } from '$stores/session.store.js';
+import { isConnected, connectionStatus, sessionId, sessionToken, clearSession } from '$stores/session.store.js';
 import { addMessage, appendToLastAssistant, isWaiting, isTyping } from '$stores/chat.store.js';
 import { stripAnsi } from '$lib/utils.js';
 import { get } from 'svelte/store';
@@ -227,6 +227,10 @@ function handleServerMessage(msg) {
       isWaiting.set(false);
       isTyping.set(false);
       addMessage('system', msg.message || 'Unknown error');
+      // Clear stored session if server indicates it's invalid (e.g. server restarted)
+      if (msg.message && /invalid session/i.test(msg.message)) {
+        clearSession();
+      }
       break;
     case 'model_update':
       // Update model health
