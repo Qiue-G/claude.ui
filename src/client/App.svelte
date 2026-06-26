@@ -98,10 +98,10 @@
     const model = e.detail;
     try {
       const session = await apiCreateSession(model.apiKey, model.model, model.provider);
-      sessionId.set(session.id);
+      sessionId.set(session.sessionId);
       sessionToken.set(session.token);
-      if (session.csrf) csrfToken.set(session.csrf);
-      connectWebSocket(session.id, session.token);
+      if (session.csrfToken) csrfToken.set(session.csrfToken);
+      connectWebSocket(session.sessionId, session.token);
       showToast('已连接: ' + model.name, 'success');
       showConfigModal = false;
     } catch (err) {
