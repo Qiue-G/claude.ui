@@ -1,0 +1,4450 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0c">
+  <meta name="version" content="7.3.1-fix-file-encoding">
+  <title>Free Code</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-base: #0a0a0c;
+      --bg-raised: #111114;
+      --bg-panel: #15151a;
+      --bg-code: #1a1a20;
+      --bg-toolbar: #0d0d10;
+      --bg-input: rgba(255,255,255,0.08);
+      --bg-hover: rgba(255,255,255,0.04);
+      --bg-accent-dim: rgba(217,119,6,0.1);
+      --bg-accent-dim2: rgba(217,119,6,0.15);
+      --border: rgba(255,255,255,0.06);
+      --border-hover: rgba(217,119,6,0.3);
+      --text-primary: #e5e5e5;
+      --text-secondary: #c4c4c4;
+      --text-muted: #8b8b9e;
+      --text-dim: #6b6b80;
+      --amber: #d97706;
+      --amber-bright: #f59e0b;
+      --green: #22c55e;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --cyan: #67e8f9;
+      --font-sans: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei',ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-mono: 'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,monospace;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-sans);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      overflow: hidden;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+
+    /* ===== Lucide-style SVG Icons ===== */
+    .icon {
+      width: 14px; height: 14px;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      fill: none; stroke: currentColor; flex-shrink: 0;
+    }
+    .icon-sm { width: 12px; height: 12px; }
+    .icon-md { width: 16px; height: 16px; }
+
+    /* ===== Menu Bar ===== */
+    .menu-bar {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .menu-btn {
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 13px;
+      font-family: var(--font-sans);
+      transition: background 0.2s, color 0.2s, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .menu-btn:hover { background: var(--bg-hover); color: var(--text-primary); transform: scale(1.02); }
+    .menu-btn .shortcut { font-size: 11px; color: var(--text-dim); margin-left: 12px; font-family: var(--font-mono); }
+
+    .menu-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 220px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .menu-dropdown.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      transition: background 0.15s ease, transform 0.1s ease;
+      user-select: none;
+    }
+    .menu-item:hover { background: var(--bg-accent-dim2); color: var(--text-primary); transform: translateX(2px); }
+    .menu-item .mi-icon { width: 18px; text-align: center; margin-right: 8px; font-size: 14px; flex-shrink: 0; }
+    .menu-item .mi-label { flex: 1; }
+    .menu-item .mi-shortcut { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+
+    .menu-sep {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 8px;
+    }
+
+    .menu-item .mi-check {
+      width: 18px;
+      text-align: center;
+      margin-right: 8px;
+      font-size: 12px;
+      color: var(--amber);
+      flex-shrink: 0;
+    }
+
+    /* ===== Toolbar ===== */
+    .toolbar {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      background: var(--bg-toolbar);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .toolbar-btn {
+      padding: 4px;
+      border-radius: 4px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s, background 0.2s, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 16px;
+    }
+    .toolbar-btn:hover { color: var(--amber); background: var(--bg-accent-dim); transform: scale(1.1); }
+    .toolbar-btn:active { transform: scale(0.95); }
+
+    .toolbar-project {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toolbar-project .name { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+    .toolbar-project .branch-name { font-size: 11px; color: var(--green); font-family: var(--font-mono); }
+
+    .toolbar-sep {
+      width: 1px;
+      height: 16px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    .toolbar-model {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      transition: color 0.2s, background 0.2s, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .toolbar-model:hover { color: var(--amber); background: var(--bg-accent-dim); transform: scale(1.02); }
+    .toolbar-model .arrow { font-size: 10px; transition: transform 0.2s ease; }
+    .toolbar-model:hover .arrow { transform: rotate(180deg); }
+
+    .toolbar-spacer { flex: 1; }
+
+    .toolbar-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .toolbar-status .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      position: relative;
+    }
+    .toolbar-status .dot::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: var(--green);
+      opacity: 0;
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+    @keyframes statusPulse {
+      0%, 100% { transform: scale(1); opacity: 0.4; }
+      50% { transform: scale(1.8); opacity: 0; }
+    }
+    .toolbar-status .dot.disconnected {
+      background: var(--red);
+    }
+    .toolbar-status .dot.disconnected::after {
+      background: var(--red);
+    }
+
+    /* ===== Main Layout ===== */
+    .main-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+    /* ===== Left Panel (File Browser) ===== */
+    .left-panel {
+      width: 240px;
+      background: var(--bg-raised);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .left-panel.collapsed { width: 0; border-right: none; }
+
+    .panel-header {
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .file-tree { flex: 1; overflow-y: auto; padding: 4px 0; }
+    .file-tree::-webkit-scrollbar { width: 4px; }
+    .file-tree::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      padding: 4px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-secondary);
+      gap: 6px;
+      transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+      white-space: nowrap;
+      border-radius: 4px;
+      margin: 0 4px;
+    }
+    .tree-item:hover { background: var(--bg-hover); transform: translateX(2px); }
+    .tree-item.active { background: var(--bg-accent-dim2); color: var(--amber-bright); }
+    .tree-item .arrow { font-size: 10px; color: var(--text-dim); width: 12px; text-align: center; flex-shrink: 0; transition: transform 0.2s ease; }
+    .tree-item .icon { font-size: 14px; flex-shrink: 0; width: 16px; text-align: center; }
+    .tree-item.folder { font-weight: 500; }
+    .tree-children { display: none; }
+    .tree-children.open { display: block; animation: treeExpand 0.2s ease; }
+    @keyframes treeExpand {
+      from { opacity: 0; max-height: 0; }
+      to { opacity: 1; max-height: 500px; }
+    }
+
+    /* ===== Resize Handle ===== */
+    .resize-v {
+      width: 1px;
+      background: var(--border);
+      cursor: col-resize;
+      transition: background 0.2s ease, width 0.2s ease;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .resize-v::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: var(--amber);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .resize-v:hover { background: var(--border-hover); width: 3px; }
+    .resize-v:hover::after { opacity: 0.3; }
+
+    /* ===== Code Editor Panel ===== */
+    .editor-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .editor-panel.collapsed { height: 0 !important; border-bottom: none; }
+
+    .editor-tabs {
+      display: flex;
+      align-items: center;
+      background: var(--bg-toolbar);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      overflow-y: hidden;
+      flex-shrink: 0;
+      min-height: 32px;
+    }
+    .editor-tabs::-webkit-scrollbar { height: 2px; }
+    .editor-tabs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+    .editor-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      cursor: pointer;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+    .editor-tab:hover { background: var(--bg-hover); color: var(--text-secondary); }
+    .editor-tab.active { background: var(--bg-base); color: var(--amber-bright); border-bottom: 2px solid var(--amber); }
+    .editor-tab .tab-close {
+      width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 3px;
+      opacity: 0.6;
+      transition: opacity 0.15s ease, background 0.15s ease;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-left: 2px;
+    }
+    .editor-tab .tab-close:hover { opacity: 1; }
+    .editor-tab .tab-close:hover { background: rgba(255,255,255,0.1); }
+    .editor-tab .tab-close.confirming {
+      background: var(--red);
+      color: white;
+      opacity: 1;
+      padding: 0 4px;
+      width: auto;
+      font-size: 10px;
+      font-family: var(--font-sans);
+    }
+    .editor-tab .tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px;
+      background: var(--bg-toolbar);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      min-height: 28px;
+    }
+    .editor-toolbar .et-info {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+    .editor-toolbar .et-actions { margin-left: auto; display: flex; gap: 4px; }
+    .editor-toolbar .et-btn {
+      padding: 3px 10px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-sans);
+    }
+    .editor-toolbar .et-btn:hover { background: var(--bg-accent-dim); color: var(--amber-bright); border-color: var(--border-hover); }
+    .editor-toolbar .et-btn.primary { background: var(--amber); color: var(--bg-base); border-color: var(--amber); font-weight: 600; }
+    .editor-toolbar .et-btn.primary:hover { background: var(--amber-bright); }
+
+    .editor-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .editor-gutter {
+      padding: 8px 8px 8px 12px;
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-dim);
+      user-select: none;
+      background: var(--bg-base);
+      overflow: hidden;
+      flex-shrink: 0;
+      min-width: 40px;
+      white-space: pre;
+    }
+
+    .editor-content {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+    .editor-content::-webkit-scrollbar { width: 6px; height: 6px; }
+    .editor-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    .editor-textarea {
+      width: 100%;
+      min-height: 100%;
+      padding: 8px 12px;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      white-space: pre;
+      overflow: visible;
+      tab-size: 2;
+      caret-color: var(--amber);
+    }
+
+    .editor-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-dim);
+      gap: 8px;
+    }
+    .editor-empty .ee-icon { opacity: 0.3; }
+    .editor-empty .ee-text { font-size: 13px; }
+
+    /* ===== Center (Chat Area) ===== */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 0;
+    }
+    .chat-messages::-webkit-scrollbar { width: 6px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    .chat-msg {
+      padding: 12px 24px;
+      animation: msgFadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes msgFadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .chat-msg-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .chat-msg-role {
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .chat-msg.user .chat-msg-role { color: var(--text-primary); }
+    .chat-msg.assistant .chat-msg-role { color: var(--amber); }
+    .chat-msg.system .chat-msg-role { color: var(--text-dim); }
+    .chat-msg-time { font-size: 11px; color: var(--text-dim); }
+
+    .chat-msg-body {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .chat-msg-body code {
+      background: var(--bg-code);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    .chat-msg-body pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      overflow-x: auto;
+      margin: 10px 0;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* Code block header + copy */
+    .code-block { margin: 10px 0; }
+    .code-block-hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+    .code-block-copy {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: var(--font-sans);
+      transition: all 0.15s;
+    }
+    .code-block-copy:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .code-block-copy.copied { color: var(--green); border-color: var(--green); }
+    .code-block pre {
+      margin: 0;
+      border-radius: 0 0 6px 6px;
+      border-top: none;
+    }
+
+    /* Tool Use Cards */
+    .tool-use-list { margin: 8px 0; }
+    .tool-use-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      transition: border-color 0.2s, background 0.2s;
+      animation: msgFadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .tool-use-item:hover { border-color: var(--border-hover); background: var(--bg-accent-dim); }
+    .tool-use-icon { color: var(--amber); font-size: 14px; flex-shrink: 0; }
+    .tool-use-name { color: var(--text-primary); font-weight: 500; }
+    .tool-use-detail { color: var(--text-muted); margin-left: auto; }
+    .tool-use-status {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+    }
+    .tool-use-status.done { background: rgba(34,197,94,0.15); color: var(--green); }
+    .tool-use-status.running { background: rgba(245,158,11,0.15); color: var(--amber-bright); }
+
+    /* Code block in chat */
+    .chat-code-block {
+      margin: 10px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--bg-code);
+      transition: border-color 0.2s ease;
+    }
+    .chat-code-block:hover { border-color: rgba(255,255,255,0.1); }
+    .chat-code-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+    }
+    .chat-code-header .file-icon { color: var(--amber); font-size: 14px; }
+    .chat-code-header .file-name { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+    .chat-code-header .copy-btn {
+      margin-left: auto;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      transform: translateY(-2px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .chat-code-block:hover .copy-btn {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .chat-code-header .copy-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .chat-code-body {
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* Welcome */
+    .chat-welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 24px;
+    }
+    .chat-welcome .logo {
+      font-size: 36px;
+      margin-bottom: 12px;
+      color: var(--amber);
+      opacity: 0.6;
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .chat-welcome .title { font-size: 16px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+    .chat-welcome .subtitle { font-size: 13px; margin-bottom: 20px; }
+    .chat-welcome .suggestions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .chat-welcome .suggestion:nth-child(1) { animation: msgFadeUp 0.35s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .chat-welcome .suggestion:nth-child(2) { animation: msgFadeUp 0.35s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .chat-welcome .suggestion:nth-child(3) { animation: msgFadeUp 0.35s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .chat-welcome .suggestion:nth-child(4) { animation: msgFadeUp 0.35s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .chat-welcome .suggestion {
+      padding: 10px 14px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.2s, color 0.2s, border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      line-height: 1.4;
+      position: relative;
+      overflow: hidden;
+    }
+    .chat-welcome .suggestion::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(217,119,6,0.08), transparent);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .chat-welcome .suggestion:hover {
+      border-color: var(--amber);
+      color: var(--text-secondary);
+      background: var(--bg-accent-dim);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(217,119,6,0.1);
+    }
+    .chat-welcome .suggestion:hover::before { opacity: 1; }
+
+    /* ===== Command Input ===== */
+    .command-area {
+      padding: 12px 24px 16px;
+      flex-shrink: 0;
+    }
+    .command-wrapper {
+      max-width: 720px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .command-input-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      min-height: 64px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .command-input-box:focus-within {
+      border-color: var(--border-subtle, var(--border));
+      box-shadow: none;
+    }
+
+    .command-input-box .prefix {
+      color: var(--amber);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .command-input-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: var(--font-sans);
+    }
+    .command-input-box input:focus-visible {
+      outline: none;
+    }
+    .command-input-box input::placeholder { color: var(--text-dim); }
+
+    .command-input-box .send-btn {
+      width: 28px; height: 28px;
+      background: var(--amber);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s ease, transform 0.15s ease;
+    }
+    .command-input-box .send-btn:hover { background: var(--amber-bright); transform: scale(1.05); }
+    .command-input-box .send-btn:active { transform: scale(0.95); }
+    .command-input-box .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .command-input-box .send-btn svg { width: 14px; height: 14px; fill: var(--bg-base); }
+
+    .command-hints {
+      display: flex;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .command-hints kbd {
+      background: var(--bg-input);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      border: 1px solid var(--border);
+    }
+
+    /* Autocomplete dropdown */
+    .autocomplete {
+      position: absolute;
+      bottom: 100%;
+      left: 14px;
+      right: 14px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 50;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+    .autocomplete.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .autocomplete-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .autocomplete-item:hover, .autocomplete-item.selected { background: var(--bg-accent-dim2); transform: translateX(2px); }
+    .autocomplete-item .ac-icon { color: var(--amber); width: 14px; height: 14px; display: flex; align-items: center; }
+    .autocomplete-item .ac-label { color: var(--text-primary); font-family: var(--font-mono); }
+    .autocomplete-item .ac-desc { color: var(--text-dim); margin-left: auto; font-size: 11px; }
+
+    /* ===== Right Panel (Context) ===== */
+    .right-panel {
+      width: 280px;
+      background: var(--bg-raised);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .right-panel.collapsed { width: 0; border-left: none; }
+
+    .context-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .context-tab {
+      flex: 1;
+      padding: 10px 0;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+    .context-tab:hover { color: var(--text-secondary); }
+    .context-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+    .context-tab::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: var(--amber);
+      transition: width 0.2s ease, left 0.2s ease;
+    }
+    .context-tab:hover::after { width: 60%; left: 20%; }
+    .context-tab.active::after { width: 100%; left: 0; }
+
+    .context-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+    .context-body::-webkit-scrollbar { width: 4px; }
+    .context-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    .context-section { margin-bottom: 16px; }
+    .context-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .context-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 12px;
+      transition: transform 0.15s ease;
+    }
+    .context-item:hover { transform: translateX(2px); }
+    .context-item-label { color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .context-item-value { color: var(--text-secondary); font-family: var(--font-mono); font-size: 11px; }
+
+    .progress-bar {
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.06);
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--amber);
+      transition: width 0.5s ease-out;
+    }
+
+    .tool-usage-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      font-size: 12px;
+      border-radius: 6px;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .tool-usage-item:hover { background: var(--bg-hover); transform: translateX(2px); }
+    .tool-usage-item .tu-icon { color: var(--amber); width: 14px; height: 14px; display: flex; align-items: center; }
+    .tool-usage-item .tu-name { color: var(--text-secondary); }
+    .tool-usage-item .tu-count { color: var(--text-dim); margin-left: auto; font-family: var(--font-mono); font-size: 11px; }
+    .tool-usage-item .tu-time { color: var(--text-dim); font-size: 11px; }
+
+    .hidden { display: none !important; }
+
+    /* ===== Config Modal ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+      animation: modalFadeIn 0.2s ease;
+    }
+    @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 440px;
+      max-width: 90vw;
+      animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    @keyframes modalSlideUp { from { transform: translateY(20px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 12px;
+    }
+    .modal-header h2 { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+    .modal-close {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 18px; padding: 4px; border-radius: 4px;
+      transition: background 0.15s, color 0.15s, transform 0.15s;
+    }
+    .modal-close:hover { background: var(--bg-hover); color: var(--text-primary); transform: rotate(90deg); }
+
+    .modal-body { padding: 4px 20px 16px; }
+    .modal-body .form-group { margin-bottom: 12px; }
+    .modal-body label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .modal-body input {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font-sans);
+    }
+    .modal-body input:focus-visible {
+      outline: 2px solid var(--amber);
+      outline-offset: 2px;
+      border-color: var(--amber);
+    }
+
+    /* Custom Select Dropdown */
+    .custom-select { position: relative; }
+    .custom-select-trigger {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.15s;
+      user-select: none;
+    }
+    .custom-select-trigger:hover { border-color: rgba(255,255,255,0.12); }
+    .custom-select-trigger.open { border-color: var(--amber); }
+    .custom-select-trigger .cs-arrow {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: transform 0.15s;
+    }
+    .custom-select-trigger.open .cs-arrow { transform: rotate(180deg); }
+    .custom-select-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 60;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      padding: 4px;
+    }
+    .custom-select-dropdown.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .custom-select-dropdown::-webkit-scrollbar { width: 4px; }
+    .custom-select-dropdown::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .custom-select-option {
+      padding: 7px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .custom-select-option:hover {
+      background: rgba(255,255,255,0.06);
+      transform: translateX(2px);
+    }
+    .custom-select-option.selected {
+      background: rgba(255,255,255,0.12);
+      color: var(--text-primary);
+    }
+
+    .modal-footer { padding: 0 20px 16px; }
+    .modal-submit {
+      width: 100%;
+      padding: 10px;
+      background: var(--amber);
+      color: var(--bg-base);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .modal-submit:hover { background: var(--amber-bright); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(217,119,6,0.3); }
+    .modal-submit:active { transform: translateY(0); box-shadow: none; }
+
+    /* ===== Config Modal Top Tabs ===== */
+    .config-top-tab {
+      flex: 1;
+      padding: 10px 0;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .config-top-tab:hover { color: var(--text-secondary); }
+    .config-top-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+    /* ===== "使用其他模型" option ===== */
+    .use-other-model {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-top: 1px solid var(--border);
+      margin-top: 2px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .use-other-model:hover { background: rgba(255,255,255,0.04); }
+    .use-other-model .uom-label { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+    .use-other-model .uom-desc { font-size: 11px; color: var(--text-dim); }
+
+    /* ===== Password Toggle ===== */
+    .password-wrapper { position: relative; }
+    .password-wrapper input { padding-right: 36px; }
+    .password-toggle {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--text-dim); cursor: pointer;
+      padding: 4px; display: flex; align-items: center; justify-content: center;
+      transition: color 0.2s;
+    }
+    .password-toggle:hover { color: var(--text-secondary); }
+    .password-toggle svg { width: 16px; height: 16px; }
+
+    /* ===== Model Management List ===== */
+    .model-list { padding: 4px 0; }
+    .model-list-empty {
+      text-align: center;
+      padding: 32px 0;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+    .model-list-empty .mle-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+    .model-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      border: 1px solid transparent;
+    }
+    .model-item:hover { background: var(--bg-hover); }
+    .model-item.active {
+      background: var(--bg-accent-dim);
+      border-color: var(--border-hover);
+    }
+    .model-item-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .model-item-icon.openrouter { background: rgba(217,119,6,0.15); color: var(--amber); }
+    .model-item-icon.anthropic { background: rgba(217,119,6,0.15); color: var(--amber); }
+    .model-item-icon.openai { background: rgba(59,130,246,0.15); color: var(--blue); }
+    .model-item-icon.custom { background: rgba(139,139,158,0.15); color: var(--text-muted); }
+    .model-item-info { flex: 1; min-width: 0; }
+    .model-item-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .model-item-detail { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+    .model-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .model-item-btn {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      border: none;
+      background: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+      font-size: 14px;
+    }
+    .model-item-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .model-item-btn.delete:hover { color: var(--red); background: rgba(239,68,68,0.1); }
+    .model-item-btn.switch-btn { color: var(--amber); }
+    .model-item-btn.switch-btn:hover { background: var(--bg-accent-dim); }
+    .model-item .active-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(34,197,94,0.15);
+      color: var(--green);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    /* ===== Typing indicator ===== */
+    .typing-indicator { display: flex; gap: 4px; padding: 4px 0; }
+    .typing-indicator span {
+      width: 5px; height: 5px;
+      background: var(--amber);
+      border-radius: 50%;
+      animation: typingBounce 1.4s ease-in-out infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.16s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.32s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* Syntax highlighting in code blocks */
+    .syn-kw { color: #c792ea; }
+    .syn-str { color: #c3e88d; }
+    .syn-cmt { color: #546e7a; font-style: italic; }
+    .syn-fn { color: #82aaff; }
+    .syn-num { color: #f78c6c; }
+    .syn-type { color: #ffcb6b; }
+    .syn-attr { color: #ffcb6b; }
+  
+        /* ===== Mobile Responsive ===== */
+    @media (max-width: 768px) {
+      /* ── Toolbar compact ── */
+      .toolbar {
+        height: 40px;
+        padding: 0 8px;
+        gap: 4px;
+      }
+      .menu-btn { font-size: 12px; padding: 4px 6px; }
+      .toolbar-sep { margin: 0 2px; height: 14px; }
+      .toolbar-btn { font-size: 14px; padding: 3px; }
+      .toolbar-btn .icon { width: 16px; height: 16px; }
+      .toolbar-project .name { font-size: 12px; }
+      .toolbar-model { font-size: 11px; padding: 3px 6px; gap: 2px; }
+      .toolbar-status { font-size: 10px; gap: 3px; }
+      #statusText { display: none; }
+
+      /* Left panel as overlay drawer */
+      .left-panel {
+        position: fixed;
+        left: -280px;
+        top: 40px;
+        bottom: 0;
+        z-index: 100;
+        width: 280px;
+        transition: left 0.25s ease;
+        box-shadow: 2px 0 12px rgba(0,0,0,0.3);
+      }
+      .left-panel.open { left: 0; }
+      #resizeLeft { display: none; }
+      .right-panel {
+        position: fixed;
+        right: -280px;
+        top: 40px;
+        bottom: 0;
+        z-index: 100;
+        width: 280px;
+        transition: right 0.25s ease;
+        box-shadow: -2px 0 12px rgba(0,0,0,0.3);
+        border-left: 1px solid var(--border);
+      }
+      .right-panel.open { right: 0; }
+      #resizeRight { display: none; }
+
+      /* Chat area full width */
+      .chat-area { flex: 1; }
+      .chat-messages { padding: 8px 0; }
+
+      /* Editor panel on mobile */
+      .editor-panel { height: 45% !important; }
+      .editor-panel.collapsed { height: 0 !important; }
+      .editor-textarea { font-size: 14px; }
+
+      /* Welcome */
+      .chat-welcome { padding: 24px 16px; }
+      .chat-welcome .logo { margin-bottom: 12px; }
+      .chat-welcome .title { font-size: 20px; }
+      .chat-welcome .subtitle { font-size: 13px; }
+      .chat-welcome .suggestions { flex-wrap: wrap; gap: 6px; }
+      .chat-welcome .suggestion { font-size: 12px; padding: 6px 10px; }
+
+      /* Chat messages */
+      .chat-msg { padding: 10px 16px; }
+      .chat-msg-body { font-size: 13px; }
+      .chat-msg-role { font-size: 10px; }
+
+      /* Command input */
+      .command-area {
+        padding: 8px 12px 12px;
+        position: sticky;
+        bottom: 0;
+        background: var(--bg-base);
+        z-index: 10;
+      }
+      .command-input-box { padding: 16px 14px; border-radius: 8px; min-height: 56px; }
+      .command-input-box input { font-size: 15px; }
+      .command-input-box .prefix { font-size: 13px; }
+      .command-input-box .send-btn { width: 32px; height: 32px; flex-shrink: 0; }
+      .command-input-box .send-btn svg { width: 16px; height: 16px; }
+      .command-hints { display: none; }
+      .command-wrapper { max-width: 100%; }
+
+      /* Code blocks */
+      .chat-code-block { margin: 4px 0; }
+      .chat-code-body { font-size: 12px; padding: 10px; }
+
+      /* Overlay for left panel */
+      .panel-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99;
+        background: rgba(0,0,0,0.4);
+      }
+      .panel-overlay.show { display: block; }
+    }
+
+    @media (max-width: 480px) {
+      .toolbar { height: 36px; padding: 0 4px; gap: 2px; }
+      .menu-btn { font-size: 11px; padding: 3px 5px; }
+      .toolbar-btn { padding: 2px; }
+      .toolbar-btn .icon { width: 14px; height: 14px; }
+      .toolbar-project .name { font-size: 11px; }
+      .toolbar-model { font-size: 10px; padding: 2px 4px; }
+      .toolbar-status .dot { width: 5px; height: 5px; }
+      .chat-welcome .title { font-size: 18px; }
+      .command-area { padding: 6px 8px 8px; }
+      .modal { width: 95vw !important; }
+      .modal-body { padding: 4px 14px 12px; }
+      .modal-header { padding: 12px 14px 10px; }
+      .modal-footer { padding: 0 14px 12px; }
+    }
+
+    /* Skip Link */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--amber);
+      color: var(--bg-base);
+      padding: 8px 16px;
+      z-index: 9999;
+      font-size: 13px;
+      text-decoration: none;
+      border-radius: 0 0 6px 0;
+      transition: top 0.2s;
+    }
+    .skip-link:focus {
+      top: 0;
+    }
+
+    /* ===== Accessibility & Mobile Optimizations ===== */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Touch & Interaction */
+    button, .toolbar-btn, .menu-btn, .modal-close, .send-btn {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(217,119,6,0.1);
+    }
+
+    .modal, .menu-dropdown {
+      overscroll-behavior: contain;
+    }
+
+    /* Safe Areas */
+    .toolbar {
+      padding-top: env(safe-area-inset-top, 0);
+    }
+    .command-area {
+      padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+    }
+    .left-panel, .right-panel {
+      padding-left: env(safe-area-inset-left, 0);
+      padding-right: env(safe-area-inset-right, 0);
+    }
+
+    /* Dark Mode */
+    html.dark {
+      color-scheme: dark;
+    }
+
+    /* Context Menu */
+    .context-menu {
+      position: fixed;
+      z-index: 10000;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 0;
+      min-width: 140px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .context-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-primary);
+      transition: background 0.15s;
+    }
+    .context-menu-item:hover {
+      background: var(--bg-hover);
+    }
+    .context-menu-item.danger {
+      color: var(--red);
+    }
+    .context-menu-item.danger:hover {
+      background: rgba(239,68,68,0.1);
+    }
+    .cm-icon { font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<a href="#chatMessages" class="skip-link">跳转到主内容</a>
+
+<div class="app">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <!-- File Menu -->
+    <div class="menu-bar">
+      <button class="menu-btn" id="fileMenuBtn">文件(F)</button>
+      <div class="menu-dropdown" id="fileMenuDropdown">
+        <div class="menu-item" id="menuNewFile">
+          <span class="mi-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="mi-label">新建文件</span>
+          <span class="mi-shortcut">Ctrl+N</span>
+        </div>
+        <div class="menu-item" id="menuOpenFile">
+          <span class="mi-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="mi-label">打开文件</span>
+          <span class="mi-shortcut">Ctrl+O</span>
+        </div>
+        <div class="menu-item" id="menuOpenFolder">
+          <span class="mi-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></span>
+          <span class="mi-label">打开文件夹</span>
+          <span class="mi-shortcut">Ctrl+Shift+O</span>
+        </div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" id="menuSave">
+          <span class="mi-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
+          <span class="mi-label">保存</span>
+          <span class="mi-shortcut">Ctrl+S</span>
+        </div>
+        <div class="menu-item" id="menuSaveAs">
+          <span class="mi-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+          <span class="mi-label">另存为</span>
+          <span class="mi-shortcut">Ctrl+Shift+S</span>
+        </div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" id="menuAutoSave">
+          <span class="mi-check" id="autoSaveCheck"></span>
+          <span class="mi-label">自动保存</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="toolbar-btn" id="toggleLeft" title="切换文件浏览器" aria-label="切换文件浏览器">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    </button>
+
+    <div class="toolbar-project">
+      <svg class="icon" viewBox="0 0 24 24" style="color:var(--amber)" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      <span class="name">free-code</span>
+      <svg class="icon icon-sm" viewBox="0 0 24 24" style="color:var(--green)" aria-hidden="true"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+      <span class="branch-name">main</span>
+    </div>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="toolbar-model" id="modelBtn" aria-label="配置模型">
+      <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+      <span id="modelName">未配置模型</span>
+      <span class="arrow">&#9662;</span>
+    </button>
+
+    <div class="toolbar-spacer"></div>
+
+    <div class="toolbar-status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">未连接</span>
+    </div>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="toolbar-btn" id="toggleRight" title="切换上下文面板" aria-label="切换上下文面板">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+    </button>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    <!-- Left Panel: File Browser -->
+    <div class="left-panel" id="leftPanel">
+      <div class="panel-header">资源管理器</div>
+      <div class="file-tree" id="fileTree" role="tree" aria-label="文件树">
+      </div>
+    </div>
+
+    <!-- Resize -->
+    <div class="resize-v" id="resizeLeft"></div>
+
+    <!-- Center: Editor + Chat -->
+    <div class="chat-area">
+      <!-- Code Editor Panel -->
+      <div class="editor-panel collapsed" id="editorPanel" style="height: 0;">
+        <div class="editor-tabs" id="editorTabs"></div>
+        <div class="editor-toolbar" id="editorToolbar" style="display:none;">
+          <span class="et-info" id="editorFileInfo"></span>
+          <div class="et-actions">
+            <button class="et-btn" id="editorFormatBtn" title="格式化">格式化</button>
+            <button class="et-btn primary" id="editorSaveBtn" title="保存 (Ctrl+S)">保存</button>
+          </div>
+        </div>
+        <div class="editor-body" id="editorBody">
+          <div class="editor-empty" id="editorEmpty">
+            <svg class="icon icon-md" viewBox="0 0 24 24" style="width:32px;height:32px;color:var(--text-dim)"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span class="ee-text">点击文件树中的文件以打开编辑器</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Messages -->
+      <div class="chat-messages" id="chatMessages" aria-live="polite" aria-atomic="false">
+        <div class="chat-welcome" id="chatWelcome">
+          <div class="logo"><svg class="icon icon-md" viewBox="0 0 24 24" style="color:var(--amber)"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+          <div class="title">Free Code</div>
+          <div class="subtitle">AI 编程助手 — 我可以帮你编辑代码、运行命令、分析文件</div>
+          <div class="suggestions">
+            <div class="suggestion" data-text="分析当前项目的代码结构">分析当前项目的代码结构</div>
+            <div class="suggestion" data-text="帮我重构 Header 组件">帮我重构 Header 组件</div>
+            <div class="suggestion" data-text="检查代码中的潜在问题">检查代码中的潜在问题</div>
+            <div class="suggestion" data-text="添加深色模式切换功能">添加深色模式切换功能</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Command Input -->
+      <div class="command-area">
+        <div class="command-wrapper">
+          <div class="autocomplete" id="autocomplete"></div>
+          <div class="command-input-box">
+            <span class="prefix">&gt;</span>
+            <input type="text" id="commandInput" placeholder="输入指令，/ 命令，@ 引用文件..." autocomplete="off" spellcheck="false">
+            <button class="send-btn" id="sendBtn" title="发送" aria-label="发送消息">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+          <div class="command-hints">
+            <span><kbd>Enter</kbd> 发送</span>
+            <span><kbd>/</kbd> 命令</span>
+            <span><kbd>@</kbd> 引用文件</span>
+            <span><kbd>Tab</kbd> 补全</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resize -->
+    <div class="resize-v" id="resizeRight"></div>
+
+    <!-- Right Panel: Context -->
+    <div class="right-panel" id="rightPanel">
+      <div class="context-tabs">
+        <button class="context-tab active" data-tab="context">上下文</button>
+        <button class="context-tab" data-tab="tools">工具</button>
+      </div>
+      <div class="context-body">
+        <!-- Context Tab -->
+        <div id="tabContext">
+          <div class="context-section">
+            <div class="context-section-title"><svg class="icon icon-sm" viewBox="0 0 24 24" style="color:var(--amber)" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 项目信息</div>
+            <div id="projectInfo"></div>
+          </div>
+          <div class="context-section">
+            <div class="context-section-title"><svg class="icon icon-sm" viewBox="0 0 24 24" style="color:var(--amber-bright)" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg> Token 使用</div>
+            <div id="tokenUsage"></div>
+          </div>
+          <div class="context-section">
+            <div class="context-section-title"><svg class="icon icon-sm" viewBox="0 0 24 24" style="color:var(--text-muted)" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg> 当前文件</div>
+            <div class="context-item">
+              <span class="context-item-label" id="currentFileLabel">未选择</span>
+            </div>
+          </div>
+          <div class="context-section">
+            <div class="context-section-title"><svg class="icon icon-sm" viewBox="0 0 24 24" style="color:var(--text-muted)" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg> 当前模型</div>
+            <div class="context-item">
+              <span class="context-item-label" id="currentModelLabel">未配置</span>
+            </div>
+          </div>
+          <div class="context-section">
+            <div class="context-section-title"><svg class="icon icon-sm" viewBox="0 0 24 24" style="color:var(--amber-bright)" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> 费用统计</div>
+            <div id="costStats"></div>
+          </div>
+        </div>
+        <!-- Tools Tab -->
+        <div id="tabTools" class="hidden">
+          <div class="context-section">
+            <div class="context-section-title"><svg class="icon icon-sm" viewBox="0 0 24 24" style="color:var(--text-muted)" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> 已用工具</div>
+            <div id="toolUsageList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Overlay (mobile) -->
+  <div class="panel-overlay" id="panelOverlay"></div>
+</div>
+
+<!-- Config Modal -->
+<div class="modal-overlay hidden" id="configModal">
+  <div class="modal" style="width:500px;">
+    <div class="modal-header">
+      <h2>添加模型</h2>
+      <button class="modal-close" id="closeModal" aria-label="关闭">&times;</button>
+    </div>
+    <!-- Top Tabs -->
+    <div style="display:flex;gap:0;padding:0 20px;border-bottom:1px solid var(--border);">
+      <button class="config-top-tab active" data-tab="provider">模型服务商</button>
+      <button class="config-top-tab" data-tab="custom">自定义配置</button>
+      <button class="config-top-tab" data-tab="manage">模型管理</button>
+    </div>
+    <div class="modal-body">
+      <!-- Provider Tab -->
+      <div id="cfgTabProvider">
+        <div class="form-group">
+          <label style="color:var(--red);">* 服务商</label>
+          <div class="custom-select" id="csProvider">
+            <div class="custom-select-trigger" data-placeholder="选择服务商">
+              <span class="cs-label">选择服务商</span>
+              <span class="cs-arrow">&#9662;</span>
+            </div>
+            <div class="custom-select-dropdown" id="csProviderDropdown"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label style="color:var(--red);">* 模型</label>
+          <div class="custom-select" id="csModel">
+            <div class="custom-select-trigger" data-placeholder="选择模型">
+              <span class="cs-label">选择模型</span>
+              <span class="cs-arrow">&#9662;</span>
+            </div>
+            <div class="custom-select-dropdown" id="csModelDropdown">
+              <div class="model-search-wrapper">
+                <input type="text" id="modelSearchInput" placeholder="搜索模型名称或 ID..." autocomplete="off" style="width:100%;padding:6px 8px;font-size:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);outline:none;">
+              </div>
+            </div>
+          </div>
+          <input type="text" id="cfgModelCustom" placeholder="输入模型 ID" style="margin-top:6px;display:none;">
+        </div>
+        <div class="form-group">
+          <label style="color:var(--red);">* API 密钥 <a href="javascript:void(0)" id="getApiKeyLink" style="float:right;font-size:12px;color:var(--amber);text-decoration:none;">获取 API 密钥</a></label>
+          <div class="password-wrapper">
+            <input type="password" id="cfgApiKey" placeholder="输入 API 密钥" autocomplete="off">
+            <button type="button" class="password-toggle" data-target="cfgApiKey" title="显示/隐藏">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Custom Tab -->
+      <div id="cfgTabCustom" class="hidden">
+        <div class="form-group">
+          <label style="color:var(--red);">* 模型 ID</label>
+          <input type="text" id="cfgCustomModelId" placeholder="输入模型 ID（如 anthropic/claude-3.5-sonnet）">
+        </div>
+        <div class="form-group">
+          <label style="color:var(--red);">* API 密钥 <a href="javascript:void(0)" id="getApiKeyLink2" style="float:right;font-size:12px;color:var(--amber);text-decoration:none;">获取 API 密钥</a></label>
+          <div class="password-wrapper">
+            <input type="password" id="cfgCustomApiKey" placeholder="输入 API 密钥" autocomplete="off">
+            <button type="button" class="password-toggle" data-target="cfgCustomApiKey" title="显示/隐藏">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Base URL（可选）</label>
+          <input type="text" id="cfgCustomBaseUrl" placeholder="https://api.example.com/v1">
+        </div>
+      </div>
+      <!-- Manage Tab -->
+      <div id="cfgTabManage" class="hidden">
+        <div class="model-list" id="modelList"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-submit" id="submitConfig">添加模型</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Encode file path for URL: encode each segment but preserve '/' separators
+  function encodeFilePath(p) {
+    return p.split('/').map(encodeURIComponent).join('/');
+  }
+
+  // ===== Persistence (localStorage) =====
+  // Store file contents and editor tabs so they survive page reloads
+  // (e.g. when switching UA on mobile browser)
+  // Defined first so they can be used by any later code (TDZ-safe)
+  var STORAGE_KEY_FILES = 'fcw_fileContents';
+  var STORAGE_KEY_TABS = 'fcw_editorTabs';
+  var STORAGE_KEY_ACTIVE_TAB = 'fcw_editorActiveTab';
+  var STORAGE_KEY_AUTO_SAVE = 'fcw_autoSave';
+  var STORAGE_KEY_LEFT_PANEL = 'fcw_leftPanelCollapsed';
+  var STORAGE_KEY_RIGHT_PANEL = 'fcw_rightPanelCollapsed';
+
+  function persistFileContents() {
+    try { localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(fileContents)); } catch (e) {}
+  }
+  function persistEditorTabs() {
+    try {
+      const tabs = editorState.tabs.map(t => ({
+        path: t.path, content: t.content, original: t.original, modified: t.modified
+      }));
+      localStorage.setItem(STORAGE_KEY_TABS, JSON.stringify(tabs));
+      localStorage.setItem(STORAGE_KEY_ACTIVE_TAB, editorState.activeTab || '');
+    } catch (e) {}
+  }
+  function restorePersistedState() {
+    try {
+      const fc = localStorage.getItem(STORAGE_KEY_FILES);
+      if (fc) {
+        const parsed = JSON.parse(fc);
+        if (parsed && typeof parsed === 'object') fileContents = parsed;
+      }
+    } catch (e) { localStorage.removeItem(STORAGE_KEY_FILES); }
+    try {
+      const tabsRaw = localStorage.getItem(STORAGE_KEY_TABS);
+      if (tabsRaw) {
+        const tabs = JSON.parse(tabsRaw);
+        if (Array.isArray(tabs)) editorState.tabs = tabs;
+      }
+      const active = localStorage.getItem(STORAGE_KEY_ACTIVE_TAB);
+      if (active && editorState.tabs.some(t => t.path === active)) {
+        editorState.activeTab = active;
+      }
+    } catch (e) {
+      localStorage.removeItem(STORAGE_KEY_TABS);
+      localStorage.removeItem(STORAGE_KEY_ACTIVE_TAB);
+    }
+  }
+
+  // ===== State =====
+  let isConnected = false;
+  let ws = null;
+  let sessionId = null;
+  let sessionToken = null;
+  let csrfToken = null;
+  let isWaiting = false;
+  let currentFile = null;
+  let autoSave = localStorage.getItem(STORAGE_KEY_AUTO_SAVE) === 'true';
+  let savedModels = [];
+  try {
+    savedModels = JSON.parse(localStorage.getItem('savedModels') || '[]');
+  } catch (e) {
+    localStorage.removeItem('savedModels');
+  }
+  let activeModelId = localStorage.getItem('activeModelId') || '';
+
+  // apiKey 内嵌在 savedModels 中，避免浏览器清理时丢失关联
+  // 同时保留独立 key 作为冗余（向后兼容）
+  localStorage.setItem('savedModels', JSON.stringify(savedModels));
+
+  // Right panel dynamic data
+  let tokenStats = { input: 0, inputMax: 200000, output: 0, outputMax: 16000 };
+  let costStats = { totalCost: 0, requestCount: 0, lastModel: '', lastUpdate: null };
+  let toolUsage = {};
+  let projectInfo = { framework: '', language: '', ui: '', style: '' };
+
+  // File content tracking
+  let fileContents = {}; // path -> content
+  let currentFileContent = null; // content of currently opened/edited file
+  let autoSaveTimer = null;
+
+  const $ = id => document.getElementById(id);
+
+  // ===== Right Panel Render Functions =====
+  function formatNumber(num) {
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+  }
+
+  function renderProjectInfo() {
+    const el = $('projectInfo');
+    if (!projectInfo.framework && !projectInfo.language) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:4px 0;">未检测到项目信息</div>';
+      return;
+    }
+    let html = '';
+    if (projectInfo.framework) html += `<div class="context-item"><span class="context-item-label">框架</span><span class="context-item-value">${projectInfo.framework}</span></div>`;
+    if (projectInfo.language) html += `<div class="context-item"><span class="context-item-label">语言</span><span class="context-item-value">${projectInfo.language}</span></div>`;
+    if (projectInfo.ui) html += `<div class="context-item"><span class="context-item-label">UI</span><span class="context-item-value">${projectInfo.ui}</span></div>`;
+    if (projectInfo.style) html += `<div class="context-item"><span class="context-item-label">样式</span><span class="context-item-value">${projectInfo.style}</span></div>`;
+    el.innerHTML = html;
+  }
+
+  function renderTokenUsage() {
+    const el = $('tokenUsage');
+    const inputPct = Math.min((tokenStats.input / tokenStats.inputMax) * 100, 100);
+    const outputPct = Math.min((tokenStats.output / tokenStats.outputMax) * 100, 100);
+    el.innerHTML = `
+      <div class="context-item">
+        <span class="context-item-label">输入</span>
+        <span class="context-item-value">${formatNumber(tokenStats.input)} / ${formatNumber(tokenStats.inputMax)}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-bar-fill" style="width:${inputPct}%"></div></div>
+      <div class="context-item" style="margin-top:6px;">
+        <span class="context-item-label">输出</span>
+        <span class="context-item-value">${formatNumber(tokenStats.output)} / ${formatNumber(tokenStats.outputMax)}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-bar-fill" style="width:${outputPct}%;background:var(--green)"></div></div>
+    `;
+  }
+
+  function renderCostStats() {
+    const el = $('costStats');
+    if (!el) return;
+    const costStr = costStats.totalCost > 0 ? '$' + costStats.totalCost.toFixed(4) : '$0.00';
+    const timeStr = costStats.lastUpdate ? new Date(costStats.lastUpdate).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '--';
+    el.innerHTML = `
+      <div class="context-item">
+        <span class="context-item-label">本次会话费用</span>
+        <span class="context-item-value" style="color:var(--green);font-weight:600;">${costStr}</span>
+      </div>
+      <div class="context-item">
+        <span class="context-item-label">请求次数</span>
+        <span class="context-item-value">${costStats.requestCount}</span>
+      </div>
+      <div class="context-item">
+        <span class="context-item-label">最后更新</span>
+        <span class="context-item-value">${timeStr}</span>
+      </div>
+    `;
+  }
+
+  function renderToolUsage() {
+    const el = $('toolUsageList');
+    const tools = Object.entries(toolUsage);
+    if (tools.length === 0) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:4px 0;">暂无工具使用记录</div>';
+      return;
+    }
+    const toolIcons = {
+      Read: '<svg class="icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>',
+      Write: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+      Bash: '<svg class="icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+      Grep: '<svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+      Glob: '<svg class="icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+      Git: '<svg class="icon" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>'
+    };
+    el.innerHTML = tools.map(([name, data]) => `
+      <div class="tool-usage-item">
+        <span class="tu-icon">${toolIcons[name] || '<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'}</span>
+        <span class="tu-name">${escapeHtml(name)}</span>
+        <span class="tu-count">${escapeHtml(String(data.count))}</span>
+        <span class="tu-time">${escapeHtml(data.lastTime)}</span>
+      </div>
+    `).join('');
+  }
+
+  function updateCurrentModel() {
+    const el = $('currentModelLabel');
+    if (activeModelId && savedModels.length > 0) {
+      const active = savedModels.find(m => m.id === activeModelId);
+      if (active) {
+        el.textContent = active.model.split('/').pop() || active.model;
+        return;
+      }
+    }
+    el.textContent = '未配置';
+  }
+
+  function recordToolUse(toolName) {
+    if (!toolUsage[toolName]) {
+      toolUsage[toolName] = { count: 0, lastTime: '' };
+    }
+    toolUsage[toolName].count++;
+    toolUsage[toolName].lastTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    renderToolUsage();
+  }
+
+  // Initial render
+  renderProjectInfo();
+  renderTokenUsage();
+  renderCostStats();
+  renderToolUsage();
+  updateCurrentModel();
+
+  // ===== File Menu =====
+  $('fileMenuBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('fileMenuDropdown').classList.toggle('show');
+  });
+
+  // Close menu on outside click
+  document.addEventListener('click', () => {
+    $('fileMenuDropdown').classList.remove('show');
+  });
+
+  // Menu item handlers
+
+  // ===== New File =====
+  $('menuNewFile').addEventListener('click', async () => {
+    const name = prompt('输入新文件名（支持路径，如 src/utils/helper.js）：');
+    if (!name) return;
+
+    if (sessionId) {
+      try {
+        const res = await fetch('/api/files/' + sessionId + '/' + encodeFilePath(name), {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-session-token': sessionToken || '',
+            'x-csrf-token': csrfToken || ''
+          },
+          body: JSON.stringify({ content: '' })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.success) {
+          fileContents[name] = '';
+          currentFile = name;
+          currentFileContent = '';
+          $('currentFileLabel').textContent = name;
+          appendChatMsg('system', `已创建新文件: ${name}`);
+          loadFileTree();
+        } else {
+          const errMap = {
+            'Invalid API key': 'API Key 无效，请检查后重试',
+            'Invalid model': '模型名称无效',
+            'Invalid provider': '服务商不支持',
+            'Too many sessions': '会话数已达上限，请稍后重试',
+            'Too many file requests': '文件操作过于频繁，请稍后重试',
+            'CSRF token missing': '安全验证失败，请刷新页面',
+            'Access denied': '访问被拒绝',
+            'Failed to': '操作失败，请稍后重试'
+          };
+          const friendly = Object.keys(errMap).find(k => data.error.includes(k));
+          appendChatMsg('system', `创建失败: ${friendly ? '⚠ ' + errMap[friendly] : data.error}`);
+        }
+      } catch (e) {
+        appendChatMsg('system', `创建失败: ${e.message}`);
+      }
+    } else {
+      // No server session: create locally
+      fileContents[name] = '';
+      persistFileContents();
+      currentFile = name;
+      currentFileContent = '';
+      $('currentFileLabel').textContent = name;
+      appendChatMsg('system', `已创建新文件: ${name}（本地）`);
+      loadFileTree();
+    }
+  });
+
+  // ===== Open File (from local disk) =====
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.style.display = 'none';
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const content = ev.target.result;
+        currentFileContent = content;
+
+        // Upload to server workspace if session exists
+        if (sessionId) {
+          try {
+            const res = await fetch('/api/files/' + sessionId + '/' + encodeFilePath(file.name), {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-session-token': sessionToken || '',
+                'x-csrf-token': csrfToken || ''
+              },
+              body: JSON.stringify({ content: content || '' })
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || `HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            if (data.success) {
+              fileContents[file.name] = content;
+              persistFileContents();
+              currentFile = file.name;
+              $('currentFileLabel').textContent = file.name;
+              appendChatMsg('system', `已打开文件: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+              loadFileTree();
+              // Open in editor
+              openEditorTab(file.name, content);
+              // Open left panel on mobile to show file tree
+              if (window.innerWidth <= 768) {
+                $('leftPanel').classList.add('open');
+                $('panelOverlay')?.classList.add('show');
+              }
+            } else {
+              const errMap = {
+                'Invalid session': '会话无效，请重新配置',
+                'Failed to read': '文件读取失败',
+                'Access denied': '访问被拒绝',
+                'CSRF token': '安全验证失败，请刷新页面',
+                'Failed to': '操作失败'
+              };
+              const friendly = Object.keys(errMap).find(k => data.error.includes(k));
+              appendChatMsg('system', `打开文件失败: ${friendly ? '⚠ ' + errMap[friendly] : data.error}`);
+            }
+          } catch (err) {
+            appendChatMsg('system', `打开文件失败: ${err.message}`);
+          }
+        } else {
+          // No session, just load locally
+          fileContents[file.name] = content;
+          persistFileContents();
+          currentFile = file.name;
+          $('currentFileLabel').textContent = file.name;
+          appendChatMsg('system', `已打开文件: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+          // Open in editor even without session
+          openEditorTab(file.name, content);
+          // Refresh file tree to show this file locally
+          loadFileTree();
+        }
+      };
+      reader.readAsText(file);
+    }
+    fileInput.value = '';
+  });
+
+  // ===== Open Folder (from local disk) =====
+  const folderInput = document.createElement('input');
+  folderInput.type = 'file';
+  folderInput.webkitdirectory = true;
+  folderInput.style.display = 'none';
+  folderInput.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    function buildTreeFromFiles(fileList) {
+      const root = { name: 'root', type: 'directory', children: [] };
+      const pathMap = new Map();
+      pathMap.set('', root);
+
+      for (const file of fileList) {
+        const parts = file.webkitRelativePath.split('/');
+        let currentPath = '';
+
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          const parentPath = currentPath;
+          currentPath = currentPath ? currentPath + '/' + part : part;
+
+          if (!pathMap.has(currentPath)) {
+            const isFile = i === parts.length - 1;
+            const node = {
+              name: part,
+              path: currentPath,
+              type: isFile ? 'file' : 'directory',
+              size: isFile ? file.size : undefined,
+              children: isFile ? undefined : []
+            };
+            pathMap.set(currentPath, node);
+
+            const parent = pathMap.get(parentPath);
+            if (parent && parent.children) {
+              parent.children.push(node);
+            }
+          }
+        }
+      }
+
+      function sortTree(node) {
+        if (node.children) {
+          node.children.sort((a, b) => {
+            if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+            return a.name.localeCompare(b.name);
+          });
+          node.children.forEach(sortTree);
+        }
+      }
+      sortTree(root);
+      return root.children;
+    }
+
+    const tree = buildTreeFromFiles(files);
+    appendChatMsg('system', `已加载文件夹: ${files.length} 个文件，正在上传...`);
+
+    // Upload all files to server if session exists
+    if (sessionId) {
+      let uploaded = 0;
+      let failed = 0;
+      for (const file of files) {
+        try {
+          const content = await file.text();
+          const filePath = file.webkitRelativePath;
+          await fetch('/api/files/' + sessionId + '/' + encodeFilePath(filePath), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-session-token': sessionToken || '',
+              'x-csrf-token': csrfToken || ''
+            },
+            body: JSON.stringify({ content: content || '' })
+          });
+          fileContents[filePath] = content;
+          uploaded++;
+          // Persist after each file in case of long uploads
+          persistFileContents();
+        } catch (e) {
+          failed++;
+        }
+      }
+      appendChatMsg('system', `文件夹上传完成: ${uploaded} 成功, ${failed} 失败`);
+      // Refresh file tree from server
+      loadFileTree();
+    } else {
+      // No session, render locally
+      $('fileTree').innerHTML = '';
+      renderFileTree(tree, $('fileTree'), 0);
+      collectAllFiles(tree);
+    }
+
+    // Open left panel on mobile to show file tree
+    if (window.innerWidth <= 768) {
+      $('leftPanel').classList.add('open');
+      $('panelOverlay')?.classList.add('show');
+    }
+  });
+
+  $('menuOpenFile').addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  $('menuOpenFolder').addEventListener('click', () => {
+    folderInput.click();
+  });
+
+  // ===== Context Tab Switching =====
+  document.querySelectorAll('.context-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.context-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const targetId = 'tab' + tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1);
+      document.querySelectorAll('#tabContext, #tabTools').forEach(p => p.classList.add('hidden'));
+      const target = document.getElementById(targetId);
+      if (target) target.classList.remove('hidden');
+    });
+  });
+
+  // ===== Save =====
+  async function saveFile(filePath, content) {
+    if (!sessionId) {
+      appendChatMsg('system', '请先配置模型');
+      return false;
+    }
+    try {
+      const res = await fetch('/api/files/' + sessionId + '/' + encodeFilePath(filePath), {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-session-token': sessionToken || '',
+          'x-csrf-token': csrfToken || ''
+        },
+        body: JSON.stringify({ content: content || '' })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.success) {
+        fileContents[filePath] = content;
+        return true;
+      } else {
+        const errMap = {
+          'Invalid session': '会话无效，请重新配置',
+          'Failed to write': '文件写入失败',
+          'Access denied': '访问被拒绝',
+          'CSRF token': '安全验证失败，请刷新页面',
+          'Too many': '操作过于频繁，请稍后重试'
+        };
+        const friendly = Object.keys(errMap).find(k => data.error.includes(k));
+        appendChatMsg('system', `保存失败: ${friendly ? '⚠ ' + errMap[friendly] : data.error}`);
+        return false;
+      }
+    } catch (e) {
+      appendChatMsg('system', `保存失败: ${e.message}`);
+      return false;
+    }
+  }
+
+  $('menuSave').addEventListener('click', async () => {
+    if (!currentFile) {
+      appendChatMsg('system', '没有打开的文件');
+      return;
+    }
+    const ok = await saveFile(currentFile, currentFileContent);
+    if (ok) appendChatMsg('system', `已保存: ${currentFile}`);
+  });
+
+  // ===== Save As =====
+  $('menuSaveAs').addEventListener('click', async () => {
+    if (!currentFile) {
+      appendChatMsg('system', '没有打开的文件');
+      return;
+    }
+    const name = prompt('另存为：', currentFile);
+    if (!name) return;
+    const ok = await saveFile(name, currentFileContent);
+    if (ok) {
+      currentFile = name;
+      $('currentFileLabel').textContent = name;
+      appendChatMsg('system', `已另存为: ${name}`);
+      loadFileTree();
+    }
+  });
+
+  // ===== Auto Save =====
+  function startAutoSave() {
+    stopAutoSave();
+    autoSaveTimer = setInterval(() => {
+      if (currentFile && currentFileContent !== undefined) {
+        saveFile(currentFile, currentFileContent);
+      }
+    }, 30000); // every 30 seconds
+  }
+
+  function stopAutoSave() {
+    if (autoSaveTimer) {
+      clearInterval(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+  }
+
+  $('menuAutoSave').addEventListener('click', () => {
+    autoSave = !autoSave;
+    localStorage.setItem(STORAGE_KEY_AUTO_SAVE, autoSave ? 'true' : 'false');
+    $('autoSaveCheck').textContent = autoSave ? '\u2713' : '';
+    if (autoSave) {
+      startAutoSave();
+      appendChatMsg('system', '自动保存已开启（每 30 秒）');
+    } else {
+      stopAutoSave();
+      appendChatMsg('system', '自动保存已关闭');
+    }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'n') {
+      e.preventDefault();
+      $('menuNewFile').click();
+    }
+    if (e.ctrlKey && e.key === 'o') {
+      e.preventDefault();
+      $('menuOpenFile').click();
+    }
+    if (e.ctrlKey && e.shiftKey && e.key === 'O') {
+      e.preventDefault();
+      $('menuOpenFolder').click();
+    }
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      $('menuSave').click();
+    }
+    if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+      e.preventDefault();
+      $('menuSaveAs').click();
+    }
+  });
+
+  // ===== File Tree =====
+  const FOLDER_ICON = '<svg class="icon" viewBox="0 0 24 24" style="color:var(--amber)"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+  const FILE_ICON = '<svg class="icon" viewBox="0 0 24 24" style="color:var(--text-muted)"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
+  async function loadFileTree() {
+    if (sessionId) {
+      try {
+        const res = await fetch('/api/files/' + sessionId, {
+          headers: { 'x-session-token': sessionToken || '' }
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.tree && data.tree.length > 0) {
+          renderFileTree(data.tree, $('fileTree'), 0);
+          detectProjectInfo(data.tree);
+          collectAllFiles(data.tree);
+          reconcileFileContentsWithTree(data.tree);
+          // Also include local-only files that don't exist on server
+          addLocalOnlyFilesToTree(data.tree);
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to load file tree:', e);
+      }
+    }
+    // Fallback: build tree from local fileContents (no session or fetch failed)
+    const localFiles = Object.keys(fileContents);
+    if (localFiles.length > 0) {
+      const tree = localFiles.map(path => {
+        const parts = path.split('/');
+        const name = parts.pop();
+        return { name, path, type: 'file' };
+      });
+      renderFileTree(tree, $('fileTree'), 0);
+      collectAllFiles(tree);
+    }
+  }
+
+  // Walk the server's file tree and map any bare-name keys in fileContents
+  // (e.g. "HISTORY.md") to their full-path equivalents ("deepseek-v4-pro/HISTORY.md")
+  function reconcileFileContentsWithTree(tree) {
+    function visit(items) {
+      for (const item of items) {
+        if (item.type === 'file') {
+          const baseName = item.path.split('/').pop();
+          // If tree path doesn't have content but a bare-name key does, copy it
+          if (fileContents[item.path] === undefined) {
+            if (fileContents[baseName] !== undefined) {
+              fileContents[item.path] = fileContents[baseName];
+              delete fileContents[baseName];
+            } else {
+              // Check any other key that ends with /baseName
+              const match = Object.keys(fileContents).find(k =>
+                k !== item.path && k.split('/').pop() === baseName
+              );
+              if (match) {
+                fileContents[item.path] = fileContents[match];
+                delete fileContents[match];
+              }
+            }
+          }
+        }
+        if (item.children) visit(item.children);
+      }
+    }
+    visit(tree);
+    persistFileContents();
+  }
+
+  // Append local-only files (in fileContents but not in server tree) to the rendered file tree
+  function addLocalOnlyFilesToTree(tree) {
+    const treePaths = new Set();
+    function collect(items) {
+      for (const item of items) {
+        if (item.type === 'file') treePaths.add(item.path);
+        if (item.children) collect(item.children);
+      }
+    }
+    collect(tree);
+    const localPaths = Object.keys(fileContents).filter(p => !treePaths.has(p));
+    if (localPaths.length === 0) return;
+    const treeEl = $('fileTree');
+    const sep = document.createElement('div');
+    sep.className = 'tree-separator';
+    sep.style.cssText = 'margin:4px 0;border-top:1px solid var(--border);opacity:0.5';
+    treeEl.appendChild(sep);
+    for (const path of localPaths) {
+      const name = path.split('/').pop();
+      const div = document.createElement('div');
+      div.className = 'tree-item file local-only';
+      div.dataset.path = path;
+      div.innerHTML = FILE_ICON + '<span class="tree-label">' + escapeHtml(name) + ' <span style="opacity:0.5;font-size:0.85em">(本地)</span></span>';
+      div.style.cssText = 'padding-left:16px;cursor:pointer';
+      div.onclick = () => selectFile(path);
+      treeEl.appendChild(div);
+    }
+  }
+
+  function collectAllFiles(tree) {
+    allFiles = [];
+    function collect(items) {
+      for (const item of items) {
+        if (item.type === 'file') allFiles.push(item.path);
+        if (item.children) collect(item.children);
+      }
+    }
+    collect(tree);
+  }
+
+  function detectProjectInfo(tree) {
+    const files = [];
+    function collectFiles(items) {
+      for (const item of items) {
+        if (item.type === 'file') files.push(item.name.toLowerCase());
+        if (item.children) collectFiles(item.children);
+      }
+    }
+    collectFiles(tree);
+
+    // Detect framework
+    if (files.includes('next.config.js') || files.includes('next.config.ts') || files.includes('next.config.mjs')) {
+      projectInfo.framework = 'Next.js';
+    } else if (files.includes('vite.config.js') || files.includes('vite.config.ts')) {
+      projectInfo.framework = 'Vite';
+    } else if (files.includes('nuxt.config.js') || files.includes('nuxt.config.ts')) {
+      projectInfo.framework = 'Nuxt.js';
+    } else if (files.includes('angular.json')) {
+      projectInfo.framework = 'Angular';
+    } else if (files.includes('vue.config.js')) {
+      projectInfo.framework = 'Vue';
+    }
+
+    // Detect language
+    const hasTs = files.some(f => f.endsWith('.ts') || f.endsWith('.tsx'));
+    const hasJs = files.some(f => f.endsWith('.js') || f.endsWith('.jsx'));
+    if (hasTs) projectInfo.language = 'TypeScript';
+    else if (hasJs) projectInfo.language = 'JavaScript';
+
+    // Detect UI library
+    if (files.includes('components.json')) {
+      projectInfo.ui = 'shadcn/ui';
+    } else if (files.some(f => f.includes('antd') || f.includes('ant-design'))) {
+      projectInfo.ui = 'Ant Design';
+    } else if (files.some(f => f.includes('element-ui') || f.includes('element-plus'))) {
+      projectInfo.ui = 'Element UI';
+    }
+
+    // Detect style
+    if (files.includes('tailwind.config.js') || files.includes('tailwind.config.ts')) {
+      projectInfo.style = 'Tailwind CSS';
+    } else if (files.some(f => f.includes('.scss') || f.includes('.sass'))) {
+      projectInfo.style = 'Sass/SCSS';
+    } else if (files.some(f => f.includes('.less'))) {
+      projectInfo.style = 'Less';
+    }
+
+    renderProjectInfo();
+  }
+
+  function renderFileTree(items, parent, depth) {
+    parent.innerHTML = '';
+    for (const item of items) {
+      const div = document.createElement('div');
+      div.className = 'tree-item' + (item.type === 'directory' ? ' folder' : '');
+      div.style.paddingLeft = (depth * 16) + 'px';
+      div.setAttribute('role', 'treeitem');
+      div.setAttribute('tabindex', '0');
+      if (item.type === 'file') div.dataset.file = item.path;
+      if (item.type === 'directory') {
+        div.setAttribute('aria-expanded', 'false');
+      }
+
+      const arrow = document.createElement('span');
+      arrow.className = 'arrow';
+      arrow.innerHTML = item.type === 'directory' ? '&#9656;' : '';
+      div.appendChild(arrow);
+
+      const icon = document.createElement('span');
+      icon.className = 'icon';
+      icon.innerHTML = item.type === 'directory' ? FOLDER_ICON : FILE_ICON;
+      div.appendChild(icon);
+
+      const name = document.createElement('span');
+      name.textContent = item.name;
+      div.appendChild(name);
+
+      // Right-click context menu for both files and folders
+      div.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showFileContextMenu(e, item);
+      });
+
+      if (item.type === 'directory') {
+        const children = document.createElement('div');
+        children.className = 'tree-children';
+        children.id = 'dyn-tree-' + item.path.replace(/[^a-zA-Z0-9]/g, '_');
+        children.setAttribute('role', 'group');
+        renderFileTree(item.children, children, depth + 1);
+        parent.appendChild(div);
+        parent.appendChild(children);
+
+        const toggleFolder = () => {
+          children.classList.toggle('open');
+          const isOpen = children.classList.contains('open');
+          arrow.innerHTML = isOpen ? '&#9660;' : '&#9656;';
+          div.setAttribute('aria-expanded', isOpen.toString());
+        };
+
+        div.addEventListener('click', toggleFolder);
+        div.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleFolder();
+          } else if (e.key === 'ArrowRight' && !children.classList.contains('open')) {
+            e.preventDefault();
+            toggleFolder();
+          } else if (e.key === 'ArrowLeft' && children.classList.contains('open')) {
+            e.preventDefault();
+            toggleFolder();
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = div.nextElementSibling?.querySelector('.tree-item') || div.parentElement?.nextElementSibling?.querySelector('.tree-item');
+            if (next) next.focus();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prev = div.previousElementSibling?.querySelector('.tree-item:last-child') || div.parentElement?.previousElementSibling?.querySelector('.tree-item');
+            if (prev) prev.focus();
+          }
+        });
+      } else {
+        const selectFile = async () => {
+          currentFile = item.path;
+          document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+          div.classList.add('active');
+          $('currentFileLabel').textContent = currentFile;
+
+          // Helper: find any locally cached file that matches this path,
+          // either exactly or by file name (so a file opened via "Open File"
+          // with bare name "HISTORY.md" matches a tree item with full path
+          // "deepseek-v4-pro/HISTORY.md")
+          const findCachedContent = (treePath) => {
+            if (fileContents[treePath] !== undefined) return fileContents[treePath];
+            const baseName = treePath.split('/').pop();
+            const match = Object.keys(fileContents).find(k => k === baseName || k.endsWith('/' + baseName));
+            return match !== undefined ? fileContents[match] : undefined;
+          };
+
+          // Read file content from server
+          try {
+            const res = await fetch('/api/files/' + sessionId + '/' + encodeFilePath(item.path), {
+              headers: { 'x-session-token': sessionToken || '' }
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || `HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            if (data.content !== undefined) {
+              fileContents[item.path] = data.content;
+              currentFileContent = data.content;
+              persistFileContents();
+            }
+            // Open in editor: prefer local cached content (from fileInput/import)
+            // over the freshly fetched server content, since the local copy
+            // is likely the user's intended/imported version
+            const cached = findCachedContent(item.path);
+            const contentToShow = (cached !== undefined && cached.length > 0)
+              ? cached
+              : (data.content || '');
+            openEditorTab(item.path, contentToShow);
+          } catch (e) {
+            console.error('Failed to read file:', e);
+            // Still open with cached content
+            const cached = findCachedContent(item.path);
+            openEditorTab(item.path, cached || '');
+          }
+        };
+
+        div.addEventListener('click', selectFile);
+        div.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectFile();
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = div.nextElementSibling?.querySelector('.tree-item') || div.parentElement?.nextElementSibling?.querySelector('.tree-item');
+            if (next) next.focus();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prev = div.previousElementSibling?.querySelector('.tree-item:last-child') || div.parentElement?.previousElementSibling?.querySelector('.tree-item');
+            if (prev) prev.focus();
+          }
+        });
+        parent.appendChild(div);
+      }
+    }
+  }
+
+  // ===== File/Folder Context Menu =====
+  // Create context menu element early so it exists when event listeners are set up
+  const ctxMenu = document.createElement('div');
+  ctxMenu.className = 'context-menu';
+  ctxMenu.id = 'fileContextMenu';
+  ctxMenu.style.display = 'none';
+  ctxMenu.innerHTML = '<div class="context-menu-item danger" data-action="delete"><span class="cm-icon">&#128465;</span><span class="cm-label">删除</span></div>';
+  document.body.appendChild(ctxMenu);
+
+  let contextTarget = null; // { path, type, element }
+
+  function showFileContextMenu(e, item) {
+    const menu = $('fileContextMenu');
+    contextTarget = { path: item.path, type: item.type, element: e.currentTarget };
+
+    // Position menu
+    menu.style.display = 'block';
+    const x = Math.min(e.clientX, window.innerWidth - 160);
+    const y = Math.min(e.clientY, window.innerHeight - 50);
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+  }
+
+  function hideFileContextMenu() {
+    $('fileContextMenu').style.display = 'none';
+    contextTarget = null;
+  }
+
+  // Close context menu on click elsewhere
+  document.addEventListener('click', hideFileContextMenu);
+  document.addEventListener('scroll', hideFileContextMenu, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideFileContextMenu();
+  });
+
+  // Context menu action handler
+  $('fileContextMenu').addEventListener('click', (e) => {
+    const actionItem = e.target.closest('[data-action]');
+    if (!actionItem || !contextTarget) return;
+
+    const action = actionItem.dataset.action;
+    if (action === 'delete') {
+      deleteFileOrFolder(contextTarget.path, contextTarget.type, contextTarget.element);
+    }
+    hideFileContextMenu();
+  });
+
+  async function deleteFileOrFolder(path, type, element) {
+    const typeName = type === 'directory' ? '文件夹' : '文件';
+    const name = path.split('/').pop() || path;
+    if (!confirm(`确定要删除${typeName}「${name}」吗？此操作不可撤销。`)) return;
+
+    // Save snapshot of affected fileContents keys in case server delete fails
+    const savedFC = {};
+    savedFC[path] = fileContents[path];
+    const baseName = path.split('/').pop();
+    for (const key of Object.keys(fileContents)) {
+      if (key !== path && key.split('/').pop() === baseName) {
+        savedFC[key] = fileContents[key];
+      }
+    }
+    if (type === 'directory') {
+      const prefix = path + '/';
+      for (const key of Object.keys(fileContents)) {
+        if (key.startsWith(prefix)) savedFC[key] = fileContents[key];
+      }
+    }
+
+    // Remove from local fileContents cache first
+    for (const key of Object.keys(savedFC)) delete fileContents[key];
+    persistFileContents();
+
+    // Close editor tab if this file is open
+    closeEditorTab(path);
+
+    let serverFailed = false;
+
+    if (sessionId) {
+      // Delete from server workspace
+      try {
+        const res = await fetch('/api/files/' + sessionId + '/' + encodeFilePath(path), {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-token': sessionToken || '',
+            'x-csrf-token': csrfToken || ''
+          }
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+
+        if (!data.success) {
+          serverFailed = true;
+          appendChatMsg('system', `服务器删除失败: ${data.error || '未知错误'}`);
+        }
+      } catch (e) {
+        serverFailed = true;
+        appendChatMsg('system', `服务器删除失败: ${e.message}`);
+      }
+    }
+
+    if (serverFailed) {
+      // Restore local cache — server delete failed, revert to saved state
+      Object.assign(fileContents, savedFC);
+      persistFileContents();
+      return;
+    }
+
+    if (!sessionId) {
+      appendChatMsg('system', `已从本地移除${typeName}：${name}（未连接到服务器）`);
+    }
+
+    // Refresh file tree
+    await loadFileTree();
+    // Safety net: directly remove any lingering DOM element for the deleted path.
+    if (type === 'file') {
+      const lingering = document.querySelector(`.tree-item[data-file="${CSS.escape(path)}"]`);
+      if (lingering) lingering.remove();
+    }
+    appendChatMsg('system', `已删除${typeName}：${name}`);
+  }
+
+  // ===== Panel Toggles =====
+  $('toggleLeft').addEventListener('click', () => {
+    const panel = $('leftPanel');
+    const overlay = $('panelOverlay');
+    if (window.innerWidth <= 768) {
+      panel.classList.toggle('open');
+      if (overlay) overlay.classList.toggle('show');
+    } else {
+      panel.classList.toggle('collapsed');
+      localStorage.setItem(STORAGE_KEY_LEFT_PANEL, panel.classList.contains('collapsed') ? 'true' : 'false');
+    }
+  });
+  // Close panel when clicking overlay
+  const overlay = $('panelOverlay');
+  if (overlay) {
+    overlay.addEventListener('click', () => {
+      $('leftPanel').classList.remove('open');
+      $('rightPanel').classList.remove('open');
+      overlay.classList.remove('show');
+    });
+  }
+
+  $('toggleRight').addEventListener('click', () => {
+    const panel = $('rightPanel');
+    const overlay = $('panelOverlay');
+    if (window.innerWidth <= 768) {
+      panel.classList.toggle('open');
+      if (overlay) overlay.classList.toggle('show');
+    } else {
+      panel.classList.toggle('collapsed');
+      localStorage.setItem(STORAGE_KEY_RIGHT_PANEL, panel.classList.contains('collapsed') ? 'true' : 'false');
+    }
+  });
+
+  // ===== Drag to Resize Panels =====
+  function initResizeHandle(handleId, panelId, isLeft) {
+    const handle = $(handleId);
+    const panel = $(panelId);
+    if (!handle || !panel) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    handle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = panel.offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const delta = isLeft ? (e.clientX - startX) : (startX - e.clientX);
+      const newWidth = Math.max(150, Math.min(500, startWidth + delta));
+      panel.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    });
+  }
+
+  initResizeHandle('resizeLeft', 'leftPanel', true);
+  initResizeHandle('resizeRight', 'rightPanel', false);
+
+  // ===== Autocomplete =====
+  const commands = [
+    { label: '/help', desc: '显示可用命令' },
+    { label: '/compact', desc: '压缩对话上下文' },
+    { label: '/clear', desc: '清除对话历史' },
+    { label: '/model', desc: '切换模型' },
+    { label: '/cost', desc: '显示 Token 用量' },
+    { label: '/init', desc: '初始化项目' },
+    { label: '/diff', desc: '显示待提交更改' },
+    { label: '/commit', desc: '提交更改' },
+  ];
+
+  // Dynamic file list (populated from file tree)
+  let allFiles = [];
+
+  let acIndex = 0;
+  let acItems = [];
+
+  function updateAutocomplete(input) {
+    const ac = $('autocomplete');
+    if (input.startsWith('/')) {
+      const filtered = commands.filter(c => c.label.startsWith(input.toLowerCase()));
+      acItems = filtered;
+      acIndex = 0;
+      if (filtered.length > 0) {
+        ac.innerHTML = filtered.map((c, i) =>
+          `<div class="autocomplete-item ${i === 0 ? 'selected' : ''}" data-idx="${i}">
+            <span class="ac-icon">/</span>
+            <span class="ac-label">${c.label}</span>
+            <span class="ac-desc">${c.desc}</span>
+          </div>`
+        ).join('');
+        ac.classList.add('show');
+      } else {
+        ac.classList.remove('show');
+      }
+    } else if (input.includes('@')) {
+      const afterAt = input.split('@').pop() || '';
+      const filtered = allFiles.filter(f => f.toLowerCase().includes(afterAt.toLowerCase()));
+      acItems = filtered.map(f => ({ label: f }));
+      acIndex = 0;
+      if (filtered.length > 0) {
+        ac.innerHTML = filtered.map((f, i) =>
+          `<div class="autocomplete-item ${i === 0 ? 'selected' : ''}" data-idx="${i}">
+            <span class="ac-icon">@</span>
+            <span class="ac-label">${escapeHtml(f)}</span>
+          </div>`
+        ).join('');
+        ac.classList.add('show');
+      } else {
+        ac.classList.remove('show');
+      }
+    } else {
+      ac.classList.remove('show');
+    }
+  }
+
+  function selectAutocomplete() {
+    const item = acItems[acIndex];
+    if (!item) return;
+    const input = $('commandInput');
+    if (item.label.startsWith('/')) {
+      input.value = item.label + ' ';
+    } else {
+      const parts = input.value.split('@');
+      parts[parts.length - 1] = item.label;
+      input.value = parts.join('@') + ' ';
+    }
+    $('autocomplete').classList.remove('show');
+    input.focus();
+  }
+
+  $('commandInput').addEventListener('input', (e) => updateAutocomplete(e.target.value));
+  $('commandInput').addEventListener('keydown', (e) => {
+    const ac = $('autocomplete');
+    if (ac.classList.contains('show')) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = acIndex < acItems.length - 1 ? acIndex + 1 : 0; refreshAc(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = acIndex > 0 ? acIndex - 1 : acItems.length - 1; refreshAc(); }
+      else if (e.key === 'Tab' || e.key === 'Enter') { e.preventDefault(); selectAutocomplete(); }
+      else if (e.key === 'Escape') { ac.classList.remove('show'); }
+    } else if (e.key === 'Enter' && e.target.value.trim()) {
+      e.preventDefault();
+      sendCommand();
+    }
+  });
+
+  function refreshAc() {
+    document.querySelectorAll('.autocomplete-item').forEach((el, i) => {
+      el.classList.toggle('selected', i === acIndex);
+    });
+  }
+
+  // Use event delegation for autocomplete items (they are dynamically generated)
+  $('autocomplete').addEventListener('click', (e) => {
+    const item = e.target.closest('.autocomplete-item');
+    if (item && item.dataset.idx !== undefined) {
+      acIndex = parseInt(item.dataset.idx);
+      selectAutocomplete();
+    }
+  });
+
+  // ===== Chat =====
+  function appendChatMsg(role, content, toolUse, codeBlocks, timestamp) {
+    $('chatWelcome')?.classList.add('hidden');
+
+    const msg = document.createElement('div');
+    msg.className = `chat-msg ${role}`;
+
+    const roleLabels = { user: '你', assistant: 'AI', system: '系统' };
+    const time = timestamp || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+    let html = `<div class="chat-msg-header">
+      <span class="chat-msg-role">${roleLabels[role]}</span>
+      <span class="chat-msg-time">${time}</span>
+    </div>`;
+
+    // Tool use
+    if (toolUse && toolUse.length > 0) {
+      html += '<div class="tool-use-list">';
+      toolUse.forEach(t => {
+        html += `<div class="tool-use-item">
+          <span class="tool-use-icon">${escapeHtml(t.icon) || '&#9881;'}</span>
+          <span class="tool-use-name">${escapeHtml(t.name)}</span>
+          <span class="tool-use-detail">${escapeHtml(t.detail)}</span>
+          <span class="tool-use-status ${escapeHtml(t.status)}">${t.status === 'done' ? '已完成' : '运行中'}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Content
+    if (content) {
+      html += `<div class="chat-msg-body">${formatChatText(content)}</div>`;
+    }
+
+    // Code blocks
+    if (codeBlocks && codeBlocks.length > 0) {
+      codeBlocks.forEach(cb => {
+        html += `<div class="chat-code-block">
+          <div class="chat-code-header">
+            <span class="file-icon">&#128196;</span>
+            <span class="file-name">${escapeHtml(cb.filename || cb.language)}</span>
+            <button class="copy-btn" onclick="copyCode(this)">&#128203; 复制</button>
+          </div>
+          <div class="chat-code-body">${highlightCode(cb.code, cb.language)}</div>
+        </div>`;
+      });
+    }
+
+    msg.innerHTML = html;
+    $('chatMessages').appendChild(msg);
+    // Trim old messages to prevent DOM bloat (keep last 100)
+    const MAX_VISIBLE = 100;
+    while ($('chatMessages').children.length > MAX_VISIBLE) {
+      $('chatMessages').firstChild.remove();
+    }
+    $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
+  }
+
+  function showTyping() {
+    $('chatWelcome')?.classList.add('hidden');
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg assistant';
+    msg.id = 'typingMsg';
+    msg.innerHTML = `<div class="chat-msg-header">
+      <span class="chat-msg-role">AI</span>
+    </div>
+    <div class="chat-msg-body">
+      <div class="typing-indicator"><span></span><span></span><span></span></div>
+    </div>`;
+    $('chatMessages').appendChild(msg);
+    $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = $('typingMsg');
+    if (el) el.remove();
+  }
+
+  function formatChatText(text) {
+    let html = escapeHtml(text);
+    // Code blocks with header + copy button
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      const langLabel = lang || 'text';
+      return `<div class="code-block"><div class="code-block-hdr"><span>${escapeHtml(langLabel)}</span><button class="code-block-copy" title="复制代码">复制</button></div><pre><code>${code}</code></pre></div>`;
+    });
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    return html;
+  }
+
+  // Delegate copy button clicks on code blocks
+  $('chatMessages').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.code-block-copy');
+    if (!btn) return;
+    const code = btn.closest('.code-block').querySelector('code').textContent;
+    try {
+      await navigator.clipboard.writeText(code);
+      btn.textContent = '已复制';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+    } catch {
+      btn.textContent = '失败';
+      setTimeout(() => { btn.textContent = '复制'; }, 1500);
+    }
+  });
+
+  let reconnectMsgEl = null;
+  function upsertReconnectMsg(text, final = false) {
+    if (!reconnectMsgEl) {
+      reconnectMsgEl = document.createElement('div');
+      reconnectMsgEl.className = 'chat-msg system';
+      reconnectMsgEl.innerHTML = '<div class="chat-msg-header"><span class="chat-msg-role">系统</span></div><div class="chat-msg-text"></div>';
+      $('chatMessages').appendChild(reconnectMsgEl);
+      $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
+    }
+    const textEl = reconnectMsgEl.querySelector('.chat-msg-text');
+    textEl.textContent = text;
+    if (final) reconnectMsgEl.style.opacity = '0.7';
+    $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
+  }
+
+  // ===== Code Editor =====
+  const editorState = {
+    tabs: [],        // { path, content, original, modified }
+    activeTab: null,
+  };
+
+
+  function getLanguageFromPath(path) {
+    const ext = path.split('.').pop().toLowerCase();
+    const map = {
+      js: 'javascript', mjs: 'javascript', jsx: 'javascript',
+      ts: 'typescript', tsx: 'typescript',
+      py: 'python', rb: 'ruby', go: 'go', rs: 'rust',
+      java: 'java', c: 'c', cpp: 'cpp', h: 'c',
+      html: 'html', css: 'css', scss: 'scss',
+      json: 'json', yml: 'yaml', yaml: 'yaml',
+      md: 'markdown', sh: 'bash', sql: 'sql',
+      xml: 'xml', svg: 'xml', vue: 'vue',
+    };
+    return map[ext] || 'text';
+  }
+
+  function getFileIcon(path) {
+    const ext = path.split('.').pop().toLowerCase();
+    const icons = {
+      js: 'JS', mjs: 'JS', jsx: 'JS',
+      ts: 'TS', tsx: 'TS',
+      py: 'PY', json: '{}',
+      html: '<>', css: '#', md: 'M',
+      sh: '$', yml: 'Y', yaml: 'Y',
+    };
+    return icons[ext] || 'F';
+  }
+
+  function openEditorTab(path, content) {
+    // Check if tab already exists
+    let tab = editorState.tabs.find(t => t.path === path);
+    if (!tab) {
+      tab = { path, content, original: content, modified: false };
+      editorState.tabs.push(tab);
+    } else {
+      // Tab already exists. Don't blindly overwrite - that would discard
+      // local content if the caller (e.g. file-tree click) reads back a
+      // shorter/empty version from the server. Only update if:
+      //  - the new content is longer (likely the freshest version), OR
+      //  - the tab is unmodified AND the caller is explicitly reloading
+      // For safety we always preserve the longer content.
+      const existingLen = (tab.content || '').length;
+      const newLen = (content || '').length;
+      if (newLen > existingLen) {
+        tab.content = content;
+        tab.original = content;
+        tab.modified = false;
+      }
+      // If newLen <= existingLen, keep what's in the tab (don't overwrite)
+    }
+    switchEditorTab(path);
+    renderEditorTabs();
+    renderEditorContent(path);
+    persistEditorTabs();
+  }
+
+  // State for inline tab-close confirmation (per-tab path)
+  let tabCloseConfirming = null;
+  let tabCloseConfirmTimer = null;
+
+  function closeEditorTab(path) {
+    const idx = editorState.tabs.findIndex(t => t.path === path);
+    if (idx === -1) return;
+    const tab = editorState.tabs[idx];
+
+    // If tab has unsaved changes, require a second click to confirm
+    if (tab.modified) {
+      if (tabCloseConfirming === path) {
+        // Second click within the confirm window -> really close
+        clearTimeout(tabCloseConfirmTimer);
+        tabCloseConfirming = null;
+      } else {
+        // First click -> show inline "再点关闭" prompt
+        tabCloseConfirming = path;
+        renderEditorTabs();
+        // Re-render after 2s to reset state if user doesn't click again
+        clearTimeout(tabCloseConfirmTimer);
+        tabCloseConfirmTimer = setTimeout(() => {
+          if (tabCloseConfirming === path) {
+            tabCloseConfirming = null;
+            renderEditorTabs();
+          }
+        }, 2000);
+        return;
+      }
+    }
+
+    // Actually close the tab
+    editorState.tabs.splice(idx, 1);
+    if (editorState.activeTab === path) {
+      const next = editorState.tabs[idx] || editorState.tabs[idx - 1];
+      if (next) {
+        switchEditorTab(next.path);
+        renderEditorContent(next.path);
+      } else {
+        editorState.activeTab = null;
+        showEditorEmpty();
+      }
+    }
+    renderEditorTabs();
+    persistEditorTabs();
+  }
+
+  function switchEditorTab(path) {
+    editorState.activeTab = path;
+    renderEditorTabs();
+    renderEditorContent(path);
+  }
+
+  function showEditorEmpty() {
+    const panel = $('editorPanel');
+    panel.classList.add('collapsed');
+    panel.style.height = '0';
+    $('editorToolbar').style.display = 'none';
+    $('editorBody').innerHTML = `<div class="editor-empty" id="editorEmpty">
+      <svg viewBox="0 0 24 24" style="width:32px;height:32px;color:var(--text-dim);opacity:0.3" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      <span class="ee-text">点击文件树中的文件以打开编辑器</span>
+    </div>`;
+  }
+
+  function renderEditorTabs() {
+    const container = $('editorTabs');
+    if (editorState.tabs.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    container.innerHTML = editorState.tabs.map(t => {
+      const isActive = t.path === editorState.activeTab;
+      const icon = getFileIcon(t.path);
+      const name = t.path.split('/').pop();
+      const confirming = tabCloseConfirming === t.path;
+      const closeContent = confirming
+        ? '<span style="white-space:nowrap;padding:0 2px;">再点关闭</span>'
+        : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      // Use data-* attributes + event delegation (no inline onclick) to avoid
+      // CSP/quoting issues on mobile browsers
+      return `<div class="editor-tab ${isActive ? 'active' : ''}" data-tab-path="${escapeHtml(t.path)}" data-tab-role="tab">
+        ${t.modified ? '<span class="tab-dot"></span>' : ''}
+        <span style="opacity:0.6;font-size:10px">${icon}</span>
+        <span class="tab-name">${escapeHtml(name)}</span>
+        <span class="tab-close ${confirming ? 'confirming' : ''}" data-tab-path="${escapeHtml(t.path)}" data-tab-role="close" title="${confirming ? '再次点击确认关闭' : '关闭'}">${closeContent}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderEditorContent(path) {
+    const tab = editorState.tabs.find(t => t.path === path);
+    if (!tab) return;
+
+    const panel = $('editorPanel');
+    panel.classList.remove('collapsed');
+    panel.style.height = '40%';
+    $('editorToolbar').style.display = 'flex';
+
+    const lang = getLanguageFromPath(path);
+    const lineCount = tab.content.split('\n').length;
+    $('editorFileInfo').textContent = `${path} · ${lang} · ${lineCount} 行${tab.modified ? ' · 已修改' : ''}`;
+
+    // Sync currentFile/currentFileContent for auto-save and saveFile
+    currentFile = path;
+    currentFileContent = tab.content;
+    $('currentFileLabel').textContent = path;
+
+    // Build gutter + textarea
+    const gutterLines = Array.from({ length: lineCount }, (_, i) => i + 1).join('\n');
+    $('editorBody').innerHTML = `
+      <div class="editor-gutter" id="editorGutter">${escapeHtml(gutterLines)}</div>
+      <div class="editor-content" id="editorContent">
+        <textarea class="editor-textarea" id="editorTextarea" spellcheck="false"
+          autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+      </div>
+    `;
+    const ta = $('editorTextarea');
+    ta.value = tab.content;
+
+    // Sync scroll
+    const content = $('editorContent');
+    const gutter = $('editorGutter');
+    content.addEventListener('scroll', () => {
+      gutter.scrollTop = content.scrollTop;
+    });
+
+    // Track changes
+    ta.addEventListener('input', () => {
+      tab.content = ta.value;
+      tab.modified = ta.value !== tab.original;
+      currentFileContent = ta.value; // sync for auto-save
+      const newLineCount = ta.value.split('\n').length;
+      $('editorFileInfo').textContent = `${path} · ${lang} · ${newLineCount} 行${tab.modified ? ' · 已修改' : ''}`;
+      // Update gutter
+      const newGutter = Array.from({ length: newLineCount }, (_, i) => i + 1).join('\n');
+      gutter.textContent = newGutter;
+      // Update tab dot
+      renderEditorTabs();
+      // Debounced persist (500ms after last edit)
+      clearTimeout(tab._persistTimer);
+      tab._persistTimer = setTimeout(persistEditorTabs, 500);
+    });
+
+    // Tab key inserts spaces
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + '  ' + ta.value.substring(end);
+        ta.selectionStart = ta.selectionEnd = start + 2;
+        ta.dispatchEvent(new Event('input'));
+      }
+      // Ctrl+S to save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveEditorFile();
+      }
+    });
+
+    ta.focus();
+  }
+
+  async function saveEditorFile() {
+    if (!editorState.activeTab || !sessionId) return;
+    const tab = editorState.tabs.find(t => t.path === editorState.activeTab);
+    if (!tab) return;
+
+    const saveBtn = $('editorSaveBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = '保存中...';
+    saveBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/files/' + sessionId + '/' + encodeFilePath(tab.path), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-token': sessionToken || '',
+          'x-csrf-token': csrfToken || ''
+        },
+        body: JSON.stringify({ content: tab.content })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.success) {
+        tab.original = tab.content;
+        tab.modified = false;
+        fileContents[tab.path] = tab.content;
+        persistFileContents();
+        currentFileContent = tab.content;
+        const lang = getLanguageFromPath(tab.path);
+        const lineCount = tab.content.split('\n').length;
+        $('editorFileInfo').textContent = `${tab.path} · ${lang} · ${lineCount} 行`;
+        renderEditorTabs();
+        persistEditorTabs();
+        appendChatMsg('system', `已保存: ${tab.path}`);
+      } else {
+        const errMap = {
+          'Invalid session': '会话无效，请重新配置',
+          'Failed to write': '文件写入失败',
+          'Access denied': '访问被拒绝',
+          'CSRF token': '安全验证失败，请刷新页面',
+          'Too many': '操作过于频繁，请稍后重试'
+        };
+        const friendly = Object.keys(errMap).find(k => data.error.includes(k));
+        appendChatMsg('system', `保存失败: ${friendly ? '⚠ ' + errMap[friendly] : data.error}`);
+      }
+    } catch (e) {
+      appendChatMsg('system', `保存失败: ${e.message}`);
+    } finally {
+      saveBtn.textContent = originalText;
+      saveBtn.disabled = false;
+    }
+  }
+
+  // Wire up save button
+  // ===== Restore persisted state on page load =====
+  // Must run before DOMContentLoaded handlers that use editorState
+  restorePersistedState();
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const saveBtn = $('editorSaveBtn');
+    if (saveBtn) saveBtn.addEventListener('click', saveEditorFile);
+    const fmtBtn = $('editorFormatBtn');
+    if (fmtBtn) fmtBtn.addEventListener('click', () => {
+      if (!editorState.activeTab) return;
+      const tab = editorState.tabs.find(t => t.path === editorState.activeTab);
+      if (!tab) return;
+      const ta = $('editorTextarea');
+      if (!ta) return;
+      // Simple format: trim trailing spaces, ensure final newline
+      let formatted = ta.value.split('\n').map(l => l.replace(/\s+$/, '')).join('\n');
+      if (formatted && !formatted.endsWith('\n')) formatted += '\n';
+      ta.value = formatted;
+      tab.content = formatted;
+      tab.modified = formatted !== tab.original;
+      ta.dispatchEvent(new Event('input'));
+    });
+
+    // Event delegation for editor tabs (avoids inline onclick issues on mobile)
+    const tabsContainer = $('editorTabs');
+    if (tabsContainer) {
+      tabsContainer.addEventListener('click', (e) => {
+        // Walk up to find the closest .tab-close or .editor-tab
+        let target = e.target;
+        while (target && target !== tabsContainer) {
+          if (target.classList && target.classList.contains('tab-close')) {
+            e.stopPropagation();
+            e.preventDefault();
+            const path = target.dataset.tabPath;
+            if (path) closeEditorTab(path);
+            return;
+          }
+          if (target.classList && target.classList.contains('editor-tab')) {
+            const path = target.dataset.tabPath;
+            if (path) switchEditorTab(path);
+            return;
+          }
+          target = target.parentElement;
+        }
+      });
+    }
+
+    // Restore UI from persisted state
+    // Restore autoSave checkbox + timer
+    $('autoSaveCheck').textContent = autoSave ? '\u2713' : '';
+    if (autoSave) startAutoSave();
+    // Restore panel collapse state
+    if (localStorage.getItem(STORAGE_KEY_LEFT_PANEL) === 'true') {
+      $('leftPanel').classList.add('collapsed');
+    }
+    if (localStorage.getItem(STORAGE_KEY_RIGHT_PANEL) === 'true') {
+      $('rightPanel').classList.add('collapsed');
+    }
+    if (Object.keys(fileContents).length > 0 || editorState.tabs.length > 0) {
+      loadFileTree();
+    }
+    if (editorState.tabs.length > 0) {
+      renderEditorTabs();
+      if (editorState.activeTab && editorState.tabs.some(t => t.path === editorState.activeTab)) {
+        renderEditorContent(editorState.activeTab);
+      } else {
+        // No active tab but have tabs - activate the first
+        editorState.activeTab = editorState.tabs[0].path;
+        renderEditorContent(editorState.activeTab);
+      }
+    }
+  });
+
+  function escapeHtml(text) {
+    if (text == null) return '';
+    const d = document.createElement('div');
+    d.textContent = String(text);
+    return d.innerHTML;
+  }
+
+  function highlightCode(code, lang) {
+    let html = escapeHtml(code);
+    if (lang === 'ts' || lang === 'tsx' || lang === 'js') {
+      html = html.replace(/\b(import|export|from|const|let|var|function|return|if|else|for|while|async|await|class|interface|type|new|this|extends|implements)\b/g, '<span class="syn-kw">$1</span>');
+      html = html.replace(/(["'`])(?:(?!\1).)*?\1/g, '<span class="syn-str">$&</span>');
+      html = html.replace(/(\/\/.*)/g, '<span class="syn-cmt">$1</span>');
+      html = html.replace(/\b(\d+)\b/g, '<span class="syn-num">$1</span>');
+      html = html.replace(/\b([A-Z]\w+)\b/g, '<span class="syn-type">$1</span>');
+      html = html.replace(/\b(\w+)\s*(?=[<(])/g, '<span class="syn-fn">$1</span>');
+    } else if (lang === 'css') {
+      html = html.replace(/([\w-]+)(\s*:)/g, '<span class="syn-attr">$1</span>$2');
+      html = html.replace(/(:)\s*([^;]+);/g, '$1 <span class="syn-str">$2</span>;');
+      html = html.replace(/(\.[\w-]+)/g, '<span class="syn-fn">$1</span>');
+    }
+    return html;
+  }
+
+  window.copyCode = function(btn) {
+    const code = btn.closest('.chat-code-block').querySelector('.chat-code-body').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.innerHTML = '&#10003; 已复制';
+      setTimeout(() => { btn.innerHTML = '&#128203; 复制'; }, 2000);
+    });
+  };
+
+  // ===== Smart Model Recommendation (Keyword-based) =====
+  function analyzeComplexity(text) {
+    const len = text.length;
+    const lower = text.toLowerCase();
+
+    // Code/debug keywords
+    const codeKeywords = /```|function|class|const |let |var |import |export |def |return |if\s*\(|else\s*\{|for\s*\(|while\s*\(|debug|bug|error|fix|implement|实现|代码|编程|写个|重构|refactor|typescript|javascript|python|java|rust|golang|sql|css|html|react|vue|angular|node\.?js|api|database|数据库|前端|后端|算法|数据结构/.test(text);
+    const hasCodeBlock = /```[\s\S]*```/.test(text);
+
+    // Reasoning/analysis keywords
+    const reasoningKeywords = /为什么|如何|怎么|explain|how|why|分析|推理|reason|think|compare|对比|evaluate|评估|pros and cons|优缺点|deep dive|深入|详细解释|原理|机制|architecture|架构|design pattern|设计模式|complex|复杂|optimiz|优化|performance|性能|security|安全|漏洞|vulnerability/.test(text);
+
+    // Simple task keywords
+    const simpleKeywords = /翻译|translate|总结|summarize|简单|simple|quick|快速|hello|hi\b|你好|谢谢|thanks|bye|再见|what is|什么是|定义|definition|list|列举|列举几个|give me|给我一个/.test(lower);
+
+    // Creative/writing keywords
+    const creativeKeywords = /写一篇文章|write an article|story|故事|poem|诗|creative|创意|brainstorm|头脑风暴|idea|想法|suggest|建议|recommend|推荐|marketing|营销|copy|文案|广告|广告语|slogan/.test(text);
+
+    // Image generation keywords
+    const imageKeywords = /生成图片|画一个|draw|paint|image|图片|photo|照片|illustration|插画|design a|设计一个|logo|图标|icon|海报|poster|banner|壁纸|wallpaper|midjourney|dall|stable diffusion|sdxl|flux/.test(lower);
+
+    // Video keywords
+    const videoKeywords = /生成视频|video|视频|animate|动画|motion|动态|sora|runway|pika| Kling|可灵/.test(lower);
+
+    // File references
+    const hasFiles = text.includes('@');
+
+    // Determine task type with priority
+    if (imageKeywords) return { level: 'image', reason: '图片生成任务' };
+    if (videoKeywords) return { level: 'video', reason: '视频生成任务' };
+    if (hasCodeBlock || (codeKeywords && len > 100)) return { level: 'coding', reason: '编码/调试任务' };
+    if (reasoningKeywords && len > 80) return { level: 'reasoning', reason: '推理/分析任务' };
+    if (creativeKeywords) return { level: 'creative', reason: '创意/写作任务' };
+    if (simpleKeywords && len < 200 && !codeKeywords) return { level: 'simple', reason: '简单任务' };
+    if (hasFiles) return { level: 'coding', reason: '包含文件引用' };
+
+    // Fallback to length-based
+    if (len > 500) return { level: 'reasoning', reason: '内容较长，可能需要深度分析' };
+    if (len < 80 && !codeKeywords) return { level: 'simple', reason: '简短问题' };
+    return { level: 'medium', reason: '一般任务' };
+  }
+
+  function recommendModel(complexity) {
+    const activeModel = savedModels.find(m => m.id === activeModelId);
+    if (!activeModel) return null;
+
+    const provider = activeModel.provider || 'openrouter';
+    const currentModel = activeModel.model;
+    const currentLower = currentModel.toLowerCase();
+
+    // Don't recommend if already on a top-tier model for complex tasks
+    const isTopTier = /opus|o1|o3|gpt-4\.1|gemini-2\.5-pro|claude-sonnet-4/.test(currentLower);
+
+    // Model recommendations by task type
+    const recommendations = {
+      simple: {
+        openrouter: ['google/gemini-2.0-flash-lite-001', 'anthropic/claude-haiku-4.5', 'openai/gpt-4o-mini'],
+        deepseek: ['deepseek-chat'],
+        anthropic: ['claude-3-5-haiku-20241022'],
+        openai: ['gpt-4o-mini']
+      },
+      medium: {
+        openrouter: ['anthropic/claude-sonnet-4', 'openai/gpt-4o', 'google/gemini-2.5-pro'],
+        deepseek: ['deepseek-chat'],
+        anthropic: ['claude-sonnet-4-20250514'],
+        openai: ['gpt-4o']
+      },
+      coding: {
+        openrouter: ['anthropic/claude-sonnet-4', 'anthropic/claude-opus-4', 'openai/gpt-4.1'],
+        deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+        anthropic: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514'],
+        openai: ['gpt-4.1', 'gpt-4o']
+      },
+      reasoning: {
+        openrouter: ['anthropic/claude-opus-4', 'anthropic/claude-sonnet-4', 'openai/gpt-4.1'],
+        deepseek: ['deepseek-reasoner', 'deepseek-chat'],
+        anthropic: ['claude-opus-4-20250514', 'claude-sonnet-4-20250514'],
+        openai: ['gpt-4.1', 'o3-mini']
+      },
+      creative: {
+        openrouter: ['anthropic/claude-sonnet-4', 'google/gemini-2.5-pro', 'openai/gpt-4o'],
+        deepseek: ['deepseek-chat'],
+        anthropic: ['claude-sonnet-4-20250514'],
+        openai: ['gpt-4o']
+      },
+      image: {
+        openrouter: [],  // No image models in current config
+        deepseek: [],
+        anthropic: [],
+        openai: []
+      },
+      video: {
+        openrouter: [],
+        deepseek: [],
+        anthropic: [],
+        openai: []
+      }
+    };
+
+    const providerRecs = recommendations[complexity.level]?.[provider] || [];
+
+    // Find a better model (not the current one)
+    let betterModel = null;
+    for (const m of providerRecs) {
+      if (m.toLowerCase() !== currentLower) {
+        betterModel = m;
+        break;
+      }
+    }
+
+    // For image/video tasks with no configured models, skip recommendation
+    if (!betterModel && (complexity.level === 'image' || complexity.level === 'video')) return null;
+
+    // Don't recommend downgrade for complex tasks if already on top tier
+    if (isTopTier && (complexity.level === 'reasoning' || complexity.level === 'coding')) return null;
+
+    return {
+      current: currentModel,
+      recommended: betterModel,
+      reason: complexity.reason,
+      level: complexity.level
+    };
+  }
+
+  function showModelRecommendation(rec) {
+    if (!rec || !rec.recommended) return;
+
+    const levelLabels = {
+      simple: '简单',
+      medium: '中等',
+      complex: '复杂'
+    };
+
+    const msg = `💡 智能选路建议：\n检测到「${rec.reason}」（${levelLabels[rec.level]}任务）\n当前模型：${rec.current.split('/').pop()}\n推荐模型：${rec.recommended.split('/').pop()}\n\n是否切换？`;
+
+    if (confirm(msg)) {
+      // Find or create model entry
+      let targetModel = savedModels.find(m => m.model === rec.recommended);
+      if (!targetModel) {
+        // Create new model entry with same API key
+        const activeModel = savedModels.find(m => m.id === activeModelId);
+        if (activeModel) {
+          const apiKey = activeModel.apiKey || localStorage.getItem(`apiKey_${activeModel.id}`);
+          if (apiKey) {
+            const newModel = {
+              id: 'model_' + Date.now(),
+              model: rec.recommended,
+              provider: activeModel.provider,
+              baseUrl: activeModel.baseUrl || '',
+              apiKey
+            };
+            localStorage.setItem(`apiKey_${newModel.id}`, apiKey);
+            savedModels.push(newModel);
+            saveModels();
+            switchToModel(savedModels.length - 1);
+            appendChatMsg('system', `已切换到推荐模型：${rec.recommended.split('/').pop()}`);
+          }
+        }
+      } else {
+        const idx = savedModels.findIndex(m => m.id === targetModel.id);
+        if (idx >= 0) {
+          switchToModel(idx);
+          appendChatMsg('system', `已切换到推荐模型：${rec.recommended.split('/').pop()}`);
+        }
+      }
+    }
+  }
+
+  function sendCommand() {
+    const text = $('commandInput').value.trim();
+    if (!text || isWaiting) return;
+
+    appendChatMsg('user', text, null, null, new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+    $('commandInput').value = '';
+
+    if (!isConnected) {
+      appendChatMsg('system', '请先配置模型（点击工具栏的模型名称）', null, null);
+      return;
+    }
+
+    // Smart model recommendation (only for non-command messages)
+    if (!text.startsWith('/')) {
+      const complexity = analyzeComplexity(text);
+      const recommendation = recommendModel(complexity);
+      if (recommendation && recommendation.recommended) {
+        // Show recommendation asynchronously
+        setTimeout(() => showModelRecommendation(recommendation), 100);
+      }
+    }
+
+    // ===== Handle Client Commands =====
+    if (text.startsWith('/')) {
+      const parts = text.split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+
+      if (cmd === '/clear') {
+        $('chatMessages').innerHTML = '';
+        $('chatWelcome')?.classList.remove('hidden');
+        // Reset stats
+        tokenStats = { input: 0, inputMax: 200000, output: 0, outputMax: 16000 };
+        toolUsage = {};
+        renderTokenUsage();
+        renderToolUsage();
+        return;
+      }
+
+      if (cmd === '/cost') {
+        const inputPct = ((tokenStats.input / tokenStats.inputMax) * 100).toFixed(1);
+        const outputPct = ((tokenStats.output / tokenStats.outputMax) * 100).toFixed(1);
+        appendChatMsg('system', `Token 用量统计：\n输入：${formatNumber(tokenStats.input)} / ${formatNumber(tokenStats.inputMax)} (${inputPct}%)\n输出：${formatNumber(tokenStats.output)} / ${formatNumber(tokenStats.outputMax)} (${outputPct}%)`, null, null);
+        return;
+      }
+
+      if (cmd === '/help') {
+        let helpText = '可用命令：\n';
+        commands.forEach(c => { helpText += `  ${c.label} - ${c.desc}\n`; });
+        helpText += '\n快捷操作：\n  / 命令补全\n  @ 引用文件\n  Tab 自动补全';
+        appendChatMsg('system', helpText, null, null);
+        return;
+      }
+
+      if (cmd === '/model') {
+        openConfigModal();
+        return;
+      }
+
+      // Server-side commands: /compact, /init, /diff, /commit
+      // These are passed through to the backend CLI
+      isWaiting = true;
+      $('sendBtn').disabled = true;
+      showTyping();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'input', data: text }));
+      } else {
+        removeTyping();
+        appendChatMsg('system', '未连接到服务器，请刷新页面重试');
+        isWaiting = false;
+        $('sendBtn').disabled = false;
+      }
+      return;
+    }
+
+    // ===== Handle @ File References =====
+    const atMatches = text.match(/@(\S+)/g);
+    if (atMatches && atMatches.length > 0) {
+      // Extract file references and remaining text
+      const fileRefs = atMatches.map(m => m.substring(1));
+      let promptText = text;
+      fileRefs.forEach(ref => { promptText = promptText.replace('@' + ref, ''); });
+      promptText = promptText.trim();
+
+      // Read file contents
+      let attachedContent = '';
+      let readCount = 0;
+      let readDone = () => {
+        readCount++;
+        if (readCount === fileRefs.length) {
+          // All files read, send combined message
+          const fullPrompt = promptText + (promptText ? '\n\n' : '') + attachedContent;
+          isWaiting = true;
+          $('sendBtn').disabled = true;
+          showTyping();
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'input', data: fullPrompt }));
+          } else {
+            removeTyping();
+            appendChatMsg('system', '未连接到服务器，请刷新页面重试');
+            isWaiting = false;
+            $('sendBtn').disabled = false;
+          }
+        }
+      };
+
+      fileRefs.forEach(filePath => {
+        fetch('/api/files/' + sessionId + '/' + encodeFilePath(filePath), {
+          headers: { 'x-session-token': sessionToken || '' }
+        })
+          .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+          .then(data => {
+            if (data.content) {
+              attachedContent += `\n--- ${filePath} ---\n${data.content}\n`;
+            } else {
+              attachedContent += `\n--- ${filePath} ---\n(无法读取文件内容)\n`;
+            }
+            readDone();
+          })
+          .catch(() => {
+            attachedContent += `\n--- ${filePath} ---\n(文件读取失败)\n`;
+            readDone();
+          });
+      });
+      return;
+    }
+
+    // ===== Normal Message =====
+    isWaiting = true;
+    $('sendBtn').disabled = true;
+    showTyping();
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'input', data: text }));
+    } else {
+      removeTyping();
+      appendChatMsg('system', '未连接到服务器，请刷新页面重试');
+      isWaiting = false;
+      $('sendBtn').disabled = false;
+    }
+  }
+
+  $('sendBtn').addEventListener('click', sendCommand);
+
+  // Suggestions
+  document.querySelectorAll('.suggestion').forEach(s => {
+    s.addEventListener('click', () => {
+      $('commandInput').value = s.dataset.text;
+      sendCommand();
+    });
+  });
+
+  // ===== Config Modal =====
+  let selectedProvider = '';
+  let selectedModel = '';
+
+  // Custom select: toggle
+  function toggleCustomSelect(trigger, dropdown) {
+    const isOpen = dropdown.classList.contains('show');
+    closeAllDropdowns();
+    if (!isOpen) {
+      dropdown.classList.add('show');
+      trigger.classList.add('open');
+    }
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll('.custom-select-dropdown').forEach(d => d.classList.remove('show'));
+    document.querySelectorAll('.custom-select-trigger').forEach(t => t.classList.remove('open'));
+  }
+
+  // Provider dropdown
+  const providerTrigger = document.querySelector('#csProvider .custom-select-trigger');
+  const providerDropdown = $('csProviderDropdown');
+  const providerOptions = [
+    { value: 'openrouter', label: 'OpenRouter' },
+    { value: 'anthropic', label: 'Anthropic' },
+    { value: 'openai', label: 'OpenAI' },
+    { value: 'deepseek', label: 'DeepSeek' },
+  ];
+
+  function renderProviderOptions() {
+    providerDropdown.innerHTML = providerOptions.map(p =>
+      `<div class="custom-select-option ${p.value === selectedProvider ? 'selected' : ''}" data-value="${p.value}" data-label="${p.label}">${p.label}</div>`
+    ).join('');
+  }
+  renderProviderOptions();
+
+  providerTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleCustomSelect(providerTrigger, providerDropdown);
+  });
+
+  providerDropdown.addEventListener('click', (e) => {
+    const opt = e.target.closest('.custom-select-option');
+    if (!opt) return;
+    selectedProvider = opt.dataset.value;
+    providerTrigger.querySelector('.cs-label').textContent = opt.dataset.label;
+    // Clear model selection when switching providers
+    selectedModel = '';
+    modelTrigger.querySelector('.cs-label').textContent = '选择模型';
+    $('cfgModelCustom').style.display = 'none';
+    renderProviderOptions();
+    closeAllDropdowns();
+    renderModelOptions();
+  });
+
+  // Model dropdown
+  const modelTrigger = document.querySelector('#csModel .custom-select-trigger');
+  const modelDropdown = $('csModelDropdown');
+
+  // Dynamic model list with pricing
+  let dynamicModelCache = {}; // provider -> models[]
+
+  async function fetchDynamicModels(provider) {
+    if (dynamicModelCache[provider]) return dynamicModelCache[provider];
+    try {
+      const res = await fetch('/api/models?provider=' + provider);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.models && data.models.length > 0) {
+        dynamicModelCache[provider] = data.models;
+      }
+      return data.models || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function formatPrice(pricePer1M) {
+    if (!pricePer1M || pricePer1M === 0) return '免费';
+    if (pricePer1M < 0.01) return '$' + pricePer1M.toFixed(4);
+    return '$' + pricePer1M.toFixed(2);
+  }
+
+  function formatBillingOptions(m) {
+    if (m.tier === 'free') return '免费';
+    // Support billing_options array (like ModelHub)
+    if (m.billing_options && Array.isArray(m.billing_options) && m.billing_options.length > 0) {
+      return m.billing_options.map(opt => {
+        const label = opt.label || opt.type || '';
+        const prompt = opt.prompt_price_per_1m || opt.prompt;
+        const completion = opt.completion_price_per_1m || opt.completion;
+        const priceStr = `${formatPrice(prompt)}/${formatPrice(completion)}`;
+        return label ? `${label}: ${priceStr}` : priceStr;
+      }).join(' | ');
+    }
+    // Fallback to simple pricing
+    if (m.pricing) {
+      return `${formatPrice(m.pricing.prompt)}/${formatPrice(m.pricing.completion)}`;
+    }
+    return '价格未知';
+  }
+
+  function renderModelOptions(filter = '') {
+    const lowerFilter = filter.toLowerCase();
+    let html = '';
+
+    // Show loading or empty state
+    if (selectedProvider) {
+      html += `<div class="custom-select-option" style="color:var(--text-dim);pointer-events:none;" id="dynamicModelsLoading">加载中...</div>`;
+    } else {
+      html += `<div class="custom-select-option" style="color:var(--text-dim);pointer-events:none;">请先选择服务商</div>`;
+    }
+
+    html += `<div class="use-other-model" data-value="__custom__">
+      <div>
+        <div class="uom-label">使用其他模型</div>
+        <div class="uom-desc">配置自定义模型 ID 使用非列表内模型</div>
+      </div>
+    </div>`;
+    modelDropdown.innerHTML = html;
+
+    if (!selectedProvider) return;
+
+    fetchDynamicModels(selectedProvider).then(models => {
+      const loading = $('dynamicModelsLoading');
+      if (loading) loading.remove();
+
+      if (!models.length) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'custom-select-option';
+        placeholder.style.cssText = 'color:var(--text-dim);pointer-events:none;';
+        placeholder.textContent = '服务端未返回可用模型';
+        const useOther = modelDropdown.querySelector('.use-other-model');
+        if (useOther) useOther.before(placeholder);
+        return;
+      }
+
+      const filtered = lowerFilter
+        ? models.filter(m =>
+            (m.name || '').toLowerCase().includes(lowerFilter) ||
+            m.id.toLowerCase().includes(lowerFilter) ||
+            (m.provider || '').toLowerCase().includes(lowerFilter)
+          )
+        : models;
+
+      const html2 = filtered.slice(0, 30).map(m => {
+        const priceLabel = formatBillingOptions(m);
+        const ctxLabel = m.context ? (m.context >= 1000000 ? (m.context/1000000).toFixed(1)+'M' : (m.context/1000).toFixed(0)+'K') : '';
+        const safeName = escapeHtml(m.name || m.id);
+        const safeId = escapeHtml(m.id);
+        const safePriceLabel = escapeHtml(priceLabel);
+        return `<div class="custom-select-option ${safeId === selectedModel ? 'selected' : ''}" data-value="${safeId}" data-label="${safeName}">
+          <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${safeName}</span>
+            <span style="font-size:10px;color:var(--text-dim);margin-left:8px;white-space:nowrap;" title="${safePriceLabel}">${safePriceLabel}${ctxLabel ? ' · '+ctxLabel : ''}</span>
+          </div>
+        </div>`;
+      }).join('');
+
+      const useOther = modelDropdown.querySelector('.use-other-model');
+      if (useOther) useOther.insertAdjacentHTML('beforebegin', html2);
+      else modelDropdown.innerHTML += html2;
+    });
+  }
+  renderModelOptions();
+
+  modelTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleCustomSelect(modelTrigger, modelDropdown);
+  });
+
+  modelDropdown.addEventListener('click', (e) => {
+    // Don't close when clicking search input
+    if (e.target.id === 'modelSearchInput' || e.target.closest('.model-search-wrapper')) return;
+    const opt = e.target.closest('.custom-select-option, .use-other-model');
+    if (!opt) return;
+    if (opt.classList.contains('use-other-model')) {
+      selectedModel = '__custom__';
+      modelTrigger.querySelector('.cs-label').textContent = '自定义模型';
+      closeAllDropdowns();
+      $('cfgModelCustom').style.display = 'block';
+      return;
+    }
+    selectedModel = opt.dataset.value;
+    modelTrigger.querySelector('.cs-label').textContent = opt.dataset.label;
+    renderModelOptions();
+    closeAllDropdowns();
+    $('cfgModelCustom').style.display = selectedModel === '__custom__' ? 'block' : 'none';
+  });
+
+  // Model search filter
+  const modelSearchInput = $('modelSearchInput');
+  let modelSearchTimer = null;
+  if (modelSearchInput) {
+    modelSearchInput.addEventListener('input', (e) => {
+      e.stopPropagation();
+      clearTimeout(modelSearchTimer);
+      modelSearchTimer = setTimeout(() => {
+        renderModelOptions(e.target.value.trim());
+      }, 200);
+    });
+    modelSearchInput.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  // Close dropdowns on outside click
+  document.addEventListener('click', closeAllDropdowns);
+
+  // ===== Top Tab Switching =====
+  let currentConfigTab = 'provider';
+
+  function switchConfigTab(tab) {
+    currentConfigTab = tab;
+    document.querySelectorAll('.config-top-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    $('cfgTabProvider').classList.toggle('hidden', tab !== 'provider');
+    $('cfgTabCustom').classList.toggle('hidden', tab !== 'custom');
+    $('cfgTabManage').classList.toggle('hidden', tab !== 'manage');
+    $('submitConfig').closest('.modal-footer').classList.toggle('hidden', tab === 'manage');
+    if (tab === 'manage') renderModelList();
+  }
+
+  document.querySelectorAll('.config-top-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchConfigTab(tab.dataset.tab));
+  });
+
+  // ===== Model Management =====
+  const providerIcons = {
+    openrouter: '&#9881;',
+    anthropic: '&#9881;',
+    openai: '&#9881;',
+    deepseek: '&#9881;',
+    custom: '&#128295;'
+  };
+
+  function saveModels() {
+    try {
+      localStorage.setItem('savedModels', JSON.stringify(savedModels));
+      localStorage.setItem('activeModelId', activeModelId);
+    } catch (e) {}
+  }
+
+  function renderModelList() {
+    const list = $('modelList');
+    if (savedModels.length === 0) {
+      list.innerHTML = '<div class="model-list-empty"><div class="mle-icon">&#128268;</div>暂无已添加的模型<br><span style="font-size:12px;margin-top:4px;display:inline-block;">切换到"模型服务商"或"自定义配置"添加模型</span></div>';
+      return;
+    }
+    list.innerHTML = savedModels.map((m, i) => {
+      const isActive = m.id === activeModelId;
+      const iconClass = m.provider || 'custom';
+      const shortModel = m.model.split('/').pop() || m.model;
+      const providerLabel = m.provider ? m.provider.charAt(0).toUpperCase() + m.provider.slice(1) : '自定义';
+      return `<div class="model-item ${isActive ? 'active' : ''}" data-idx="${i}">
+        <div class="model-item-icon ${iconClass}">${providerIcons[iconClass] || '&#9881;'}</div>
+        <div class="model-item-info">
+          <div class="model-item-name">${escapeHtml(shortModel)}</div>
+          <div class="model-item-detail">${escapeHtml(providerLabel)} · ${escapeHtml(m.model)}</div>
+        </div>
+        ${isActive && isConnected ? '<span class="active-badge">使用中</span>' : ''}
+        <div class="model-item-actions">
+          ${(!isActive || (isActive && !isConnected)) ? `<button class="model-item-btn switch-btn" data-action="switch" data-idx="${i}" title="${isActive ? '重新连接' : '切换到此模型'}">${isActive ? '&#8635;' : '&#8644;'}</button>` : ''}
+          <button class="model-item-btn delete" data-action="delete" data-idx="${i}" title="删除模型">&#10005;</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  $('modelList').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    if (btn.dataset.action === 'delete') {
+      if (confirm(`确定删除模型 "${savedModels[idx].model}" 吗？`)) {
+        if (savedModels[idx].id === activeModelId) {
+          activeModelId = '';
+          isConnected = false;
+          if (retryTimeoutId) { clearTimeout(retryTimeoutId); retryTimeoutId = null; }
+          if (ws) { ws.onclose = null; ws.close(); ws = null; }
+          $('statusDot').style.background = 'var(--red)';
+          $('statusDot').classList.add('disconnected');
+          $('statusText').textContent = '未连接';
+          $('modelName').textContent = '未配置模型';
+        }
+        savedModels.splice(idx, 1);
+        saveModels();
+        renderModelList();
+      }
+    } else if (btn.dataset.action === 'switch') {
+      switchToModel(idx);
+    }
+  });
+
+  function switchToModel(idx) {
+    const m = savedModels[idx];
+    if (!m) return;
+    activeModelId = m.id;
+    saveModels();
+
+    const apiKey = m.apiKey || localStorage.getItem(`apiKey_${m.id}`);
+    if (!apiKey) {
+      alert('API Key 已过期，请重新配置');
+      openConfigModal();
+      renderModelList();
+      return;
+    }
+
+    // 在关键检查通过后才设置 loading 状态
+    const btn = document.querySelector(`.switch-btn[data-idx="${idx}"]`);
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+    const body = { apiKey, model: m.model };
+    if (m.provider) body.provider = m.provider;
+    if (m.baseUrl) body.baseUrl = m.baseUrl;
+
+    $('submitConfig').disabled = true;
+    $('submitConfig').textContent = '切换中...';
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    fetch('/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    }).then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); }).then(data => {
+      if (data.sessionId) {
+        // Close old WebSocket before creating new one
+        if (retryTimeoutId) { clearTimeout(retryTimeoutId); retryTimeoutId = null; }
+        if (ws) { ws.onclose = null; ws.close(); ws = null; }
+        sessionId = data.sessionId;
+        sessionToken = data.token;
+        csrfToken = data.csrfToken;
+        isConnected = true;
+        closeConfigModal();
+        const shortName = m.model.split('/').pop() || m.model;
+        $('modelName').textContent = shortName;
+        $('statusDot').style.background = 'var(--green)';
+        $('statusDot').classList.remove('disconnected');
+        $('statusText').textContent = '已连接';
+        $('statusText').style.cursor = '';
+        $('statusText').style.borderBottom = '';
+        // Update right panel
+        updateCurrentModel();
+        tokenStats = { input: 0, inputMax: 200000, output: 0, outputMax: 16000 };
+        toolUsage = {};
+        renderTokenUsage();
+        renderToolUsage();
+        appendChatMsg('system', `已切换到 ${m.model}`);
+        loadFileTree();
+        connectWebSocket();
+      }
+    }).catch(e => {
+      alert('切换失败: ' + (e.name === 'AbortError' ? '连接超时' : e.message));
+    }).finally(() => {
+      clearTimeout(timeoutId);
+      $('submitConfig').disabled = false;
+      $('submitConfig').textContent = '添加模型';
+      renderModelList();
+    });
+  }
+
+  function openConfigModal() {
+    $('configModal').classList.remove('hidden');
+    switchConfigTab('provider');
+    renderProviderOptions();
+    renderModelOptions();
+  }
+  function closeConfigModal() {
+    $('configModal').classList.add('hidden');
+    closeAllDropdowns();
+  }
+
+  $('modelBtn').addEventListener('click', openConfigModal);
+  $('closeModal').addEventListener('click', closeConfigModal);
+  $('configModal').addEventListener('click', (e) => { if (e.target === $('configModal')) closeConfigModal(); });
+
+  $('submitConfig').addEventListener('click', async () => {
+    let provider, model, apiKey, baseUrl;
+
+    if (currentConfigTab === 'custom') {
+      // 自定义配置 Tab
+      model = $('cfgCustomModelId').value.trim();
+      apiKey = $('cfgCustomApiKey').value.trim();
+      baseUrl = $('cfgCustomBaseUrl').value.trim();
+      // Validation
+      if (!model) { alert('请输入模型名称'); return; }
+      if (!apiKey) { alert('请输入 API Key'); return; }
+      if (apiKey.length < 8) { alert('API Key 太短，请检查后重试'); return; }
+      if (baseUrl && !/^https?:\/\/.+/.test(baseUrl)) { alert('Base URL 格式无效，需以 http:// 或 https:// 开头'); return; }
+      provider = '';
+    } else {
+      // 模型服务商 Tab
+      provider = selectedProvider;
+      model = selectedModel === '__custom__'
+        ? $('cfgModelCustom').value.trim()
+        : selectedModel;
+      apiKey = $('cfgApiKey').value.trim();
+      if (!provider) { alert('请选择服务商'); return; }
+      if (!model) { alert('请输入或选择模型名称'); return; }
+      if (!apiKey) { alert('请输入 API Key'); return; }
+      if (apiKey.length < 8) { alert('API Key 太短，请检查后重试'); return; }
+    }
+
+    // 检查是否已存在相同模型
+    const existingIdx = savedModels.findIndex(m => m.model === model && m.provider === provider);
+    if (existingIdx !== -1) {
+      if (!confirm(`模型 "${model}" 已存在，是否覆盖？`)) return;
+      savedModels.splice(existingIdx, 1);
+    }
+
+    $('submitConfig').disabled = true;
+    $('submitConfig').textContent = '连接中...';
+
+    try {
+      const body = { apiKey, model };
+      if (provider) body.provider = provider;
+      if (baseUrl) body.baseUrl = baseUrl;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+
+      // 保存到模型列表（apiKey 内嵌，确保浏览器清理时不丢失关联）
+      const modelEntry = {
+        id: 'model_' + Date.now(),
+        model,
+        provider,
+        baseUrl: baseUrl || '',
+        apiKey
+      };
+      localStorage.setItem(`apiKey_${modelEntry.id}`, apiKey);
+      savedModels.push(modelEntry);
+      activeModelId = modelEntry.id;
+      saveModels();
+
+      // Close old WebSocket before creating new one
+      if (retryTimeoutId) { clearTimeout(retryTimeoutId); retryTimeoutId = null; }
+      if (ws) { ws.onclose = null; ws.close(); ws = null; }
+
+      sessionId = data.sessionId;
+      sessionToken = data.token;
+      csrfToken = data.csrfToken;
+      loadFileTree();
+      isConnected = true;
+      closeConfigModal();
+
+      const shortName = model.split('/').pop() || model;
+      $('modelName').textContent = shortName;
+      $('statusDot').style.background = 'var(--green)';
+      $('statusDot').classList.remove('disconnected');
+      $('statusText').textContent = '已连接';
+      $('statusText').style.cursor = '';
+      $('statusText').style.borderBottom = '';
+
+      // Update right panel
+      updateCurrentModel();
+      tokenStats = { input: 0, inputMax: 200000, output: 0, outputMax: 16000 };
+      toolUsage = {};
+      renderTokenUsage();
+      renderToolUsage();
+
+      appendChatMsg('system', `已连接到 ${model}`);
+      connectWebSocket();
+    } catch (e) {
+      alert(e.name === 'AbortError' ? '连接超时，请检查网络后重试' : e.message);
+    } finally {
+      $('submitConfig').disabled = false;
+      $('submitConfig').textContent = '添加模型';
+    }
+  });
+
+  // ===== API Key Links =====
+  const apiKeyUrls = {
+    openrouter: 'https://openrouter.ai/keys',
+    anthropic: 'https://console.anthropic.com/settings/keys',
+    openai: 'https://platform.openai.com/api-keys',
+    deepseek: 'https://platform.deepseek.com/api_keys'
+  };
+
+  function getApiKeyUrl() {
+    return apiKeyUrls[selectedProvider] || 'https://platform.openai.com/api-keys';
+  }
+
+  $('getApiKeyLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.open(getApiKeyUrl(), '_blank', 'noopener,noreferrer');
+  });
+
+  $('getApiKeyLink2').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.open('https://platform.openai.com/api-keys', '_blank', 'noopener,noreferrer');
+  });
+
+  // ===== Password Toggle =====
+  const eyeOpen = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const eyeClosed = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>`;
+
+  document.querySelectorAll('.password-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      btn.innerHTML = isPassword ? eyeClosed : eyeOpen;
+    });
+  });
+
+  // ===== WebSocket =====
+  let retryCount = 0;
+  let retryTimeoutId = null;
+  function connectWebSocket() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${location.host}/ws`);
+    ws.onopen = () => {
+      // Reset backoff on successful connection
+      retryCount = 0;
+      // Remove reconnect status message if present
+      if (reconnectMsgEl) {
+        reconnectMsgEl.remove();
+        reconnectMsgEl = null;
+      }
+      $('statusDot').style.background = 'var(--green)';
+      $('statusDot').classList.remove('disconnected');
+      $('statusText').textContent = '已连接';
+      $('statusText').style.cursor = '';
+      $('statusText').style.borderBottom = '';
+      // Send init message to associate WebSocket with session
+      ws.send(JSON.stringify({
+        type: 'init',
+        sessionId,
+        token: sessionToken
+      }));
+    };
+    ws.onmessage = (e) => {
+      let msg;
+      try { msg = JSON.parse(e.data); }
+      catch (err) { console.error('Invalid WS message:', err); return; }
+      if (msg.type === 'output') {
+        removeTyping();
+        appendChatMsg('assistant', msg.data);
+        // Track token usage
+        if (msg.usage) {
+          if (msg.usage.input_tokens) tokenStats.input = msg.usage.input_tokens;
+          if (msg.usage.output_tokens) tokenStats.output = msg.usage.output_tokens;
+          if (msg.usage.input_max) tokenStats.inputMax = msg.usage.input_max;
+          if (msg.usage.output_max) tokenStats.outputMax = msg.usage.output_max;
+          renderTokenUsage();
+        }
+      }
+      else if (msg.type === 'tool_use') {
+        // Track tool usage
+        if (msg.tool_name) {
+          recordToolUse(msg.tool_name);
+        }
+      }
+      else if (msg.type === 'usage_update') {
+        // Update cost stats from proxy usage info
+        costStats.requestCount++;
+        costStats.lastModel = msg.model || costStats.lastModel;
+        costStats.lastUpdate = Date.now();
+        // Estimate cost based on model pricing (simplified)
+        // This is a rough estimate; actual cost depends on provider pricing
+        if (msg.model && msg.model.includes('free')) {
+          // Free model, no cost
+        } else {
+          // Rough estimate: $0.00001 per token (very approximate)
+          const estimatedCost = (msg.inputTokens + msg.outputTokens) * 0.00001;
+          costStats.totalCost += estimatedCost;
+        }
+        renderCostStats();
+      }
+      else if (msg.type === 'stderr') {
+        // Detect proxy error codes and show friendly messages
+        const errMatch = msg.data.match(/→\s*(\w+)/);
+        if (errMatch) {
+          const codeMap = {
+            invalid_api_key: 'API Key 无效或已过期，请重新配置',
+            insufficient_balance: '账户余额不足，请充值',
+            rate_limited: '请求频率过高，请稍后重试',
+            provider_error: '服务商内部错误，正在重试',
+            provider_unavailable: '服务商不可用，正在切换备用模型',
+            provider_overloaded: '服务商过载，正在重试',
+            bad_request: '请求参数无效',
+            model_not_authorized: '无权访问该模型，请更换模型',
+            endpoint_not_found: 'API 端点不存在'
+          };
+          const friendly = codeMap[errMatch[1]];
+          if (friendly) {
+            appendChatMsg('system', '⚠ ' + friendly);
+            return;
+          }
+        }
+        appendChatMsg('system', msg.data);
+      }
+      else if (msg.type === 'exit') {
+        if (msg.code !== 0) appendChatMsg('system', '进程退出，代码 ' + msg.code);
+        isWaiting = false; $('sendBtn').disabled = false;
+      } else if (msg.type === 'error') {
+        // Map server error codes to friendly messages
+        const errCodeMap = {
+          'Invalid API key': 'API Key 无效，请检查后重试',
+          'Invalid model': '模型名称无效',
+          'Invalid provider': '服务商不支持',
+          'Too many sessions': '会话数已达上限，请稍后重试',
+          'Too many requests': '请求过于频繁，请稍后重试',
+          'Session token mismatch': '会话已过期，请重新配置',
+          'Already processing': '正在处理中，请等待完成',
+          'Failed to start CLI': 'CLI 启动失败，请检查配置',
+          'WebSocket origin not allowed': '来源不被允许'
+        };
+        const friendly = Object.keys(errCodeMap).find(k => msg.message.includes(k));
+        appendChatMsg('system', friendly ? '⚠ ' + errCodeMap[friendly] : msg.message);
+        isWaiting = false; $('sendBtn').disabled = false;
+      }
+    };
+    ws.onerror = (err) => {
+      console.error('[WS] error:', err);
+    };
+    ws.onclose = () => {
+      isConnected = false;
+      if (isWaiting) {
+        isWaiting = false;
+        $('sendBtn').disabled = false;
+        removeTyping();
+      }
+      $('statusDot').style.background = 'var(--red)';
+      $('statusDot').classList.add('disconnected');
+      $('statusText').textContent = '已断开';
+
+      // Max retry limit
+      const MAX_RETRIES = 10;
+      if (retryCount >= MAX_RETRIES) {
+        upsertReconnectMsg('连接已断开，已达最大重试次数。请刷新页面重试。', true);
+        return;
+      }
+
+      // Exponential backoff: 1s, 2s, 4s, 8s … cap at 30s
+      const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+      retryCount++;
+      upsertReconnectMsg(`连接已断开，${Math.round(delay/1000)}s 后自动重连... (第 ${retryCount}/${MAX_RETRIES} 次)`);
+      retryTimeoutId = setTimeout(() => {
+        retryTimeoutId = null;
+        connectWebSocket();
+      }, delay);
+    };
+  }
+
+  // ===== Page Load: Restore Session =====
+  (async function() {
+    if (!activeModelId || savedModels.length === 0) return;
+
+    const active = savedModels.find(m => m.id === activeModelId);
+    if (!active) return;
+
+    const apiKey = active.apiKey || localStorage.getItem(`apiKey_${activeModelId}`);
+    if (!apiKey) {
+      // API key expired, just update display
+      const shortName = active.model.split('/').pop() || active.model;
+      $('modelName').textContent = shortName;
+      updateCurrentModel();
+      return;
+    }
+
+    // Update display immediately
+    const shortName = active.model.split('/').pop() || active.model;
+    $('modelName').textContent = shortName;
+    updateCurrentModel();
+
+    // Auto-reconnect session
+    try {
+      const body = { apiKey, model: active.model };
+      if (active.provider) body.provider = active.provider;
+      if (active.baseUrl) body.baseUrl = active.baseUrl;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+
+      sessionId = data.sessionId;
+      sessionToken = data.token;
+      csrfToken = data.csrfToken;
+      isConnected = true;
+
+      $('statusDot').style.background = 'var(--green)';
+      $('statusDot').classList.remove('disconnected');
+      $('statusText').textContent = '已连接';
+      $('statusText').style.cursor = '';
+      $('statusText').style.borderBottom = '';
+
+      connectWebSocket();
+      loadFileTree();
+    } catch (e) {
+      $('statusText').textContent = '重连失败 · 点此切换';
+      $('statusText').style.cursor = 'pointer';
+      $('statusText').style.borderBottom = '1px dashed var(--red)';
+      $('statusDot').classList.add('disconnected');
+    }
+  })();
+
+  // Click on status bar when disconnected → open config modal
+  $('statusText').addEventListener('click', () => {
+    if (!$('statusDot').classList.contains('disconnected')) return;
+    openConfigModal();
+  });
+</script>
+
+</body>
+</html>

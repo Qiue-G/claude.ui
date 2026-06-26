@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>ThemeToggle 方案对比</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 20px; margin-bottom: 8px; color: #fff; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+  .compare { display: flex; gap: 24px; }
+  .option {
+    flex: 1;
+    background: #16213e;
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .option:hover { border-color: #e94560; }
+  .option.selected { border-color: #e94560; box-shadow: 0 0 20px rgba(233,69,96,0.3); }
+  .option-label { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #e94560; }
+  .preview {
+    background: #0f3460;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .desc { font-size: 12px; color: #aaa; line-height: 1.5; }
+  .pros { margin-top: 12px; }
+  .pros li { font-size: 12px; color: #4ecca3; margin-bottom: 4px; list-style: none; }
+  .pros li::before { content: "+ "; color: #4ecca3; }
+  .cons li { font-size: 12px; color: #e94560; margin-bottom: 4px; list-style: none; }
+  .cons li::before { content: "- "; color: #e94560; }
+
+  /* Option A: Cycle Button */
+  .cycle-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; background: transparent;
+    border: 1px solid #555; border-radius: 6px;
+    color: #e0e0e0; font-size: 13px; cursor: pointer;
+  }
+  .cycle-btn .icon { font-size: 16px; }
+
+  /* Option B: Dropdown */
+  .dropdown-wrapper { position: relative; }
+  .dropdown-trigger {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; background: transparent;
+    border: 1px solid #555; border-radius: 6px;
+    color: #e0e0e0; font-size: 13px; cursor: pointer;
+  }
+  .dropdown-menu {
+    position: absolute; top: calc(100% + 4px); left: 0;
+    background: #1a1a2e; border: 1px solid #555;
+    border-radius: 8px; padding: 4px; min-width: 140px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .dropdown-item {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 8px 12px; background: transparent;
+    border: none; border-radius: 6px; color: #e0e0e0;
+    font-size: 13px; cursor: pointer; text-align: left;
+  }
+  .dropdown-item:hover { background: #16213e; }
+  .dropdown-item.active { background: rgba(233,69,96,0.15); color: #e94560; }
+  .dropdown-item .check { margin-left: auto; }
+
+  .rec-badge {
+    display: inline-block; background: #4ecca3; color: #1a1a2e;
+    font-size: 11px; font-weight: 700; padding: 2px 8px;
+    border-radius: 4px; margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>ThemeToggle 交互方式对比</h1>
+<p class="subtitle">当前方案 vs 改进方案 — 点击选择你偏好的方案</p>
+
+<div class="compare">
+  <div class="option" data-choice="A" onclick="selectOption(this)">
+    <div class="option-label">方案 A：循环按钮（当前）</div>
+    <div class="preview">
+      <button class="cycle-btn">
+        <span class="icon">🌙</span>
+        <span>深色</span>
+      </button>
+    </div>
+    <div class="desc">点击按钮在 深色 → 浅色 → 系统 之间循环切换</div>
+    <ul class="pros">
+      <li>实现简单，代码量少</li>
+      <li>操作快捷（一次点击）</li>
+    </ul>
+    <ul class="cons">
+      <li>无法直接选择目标主题</li>
+      <li>需要循环 2 次才能到"系统"</li>
+      <li>用户不知道有哪些选项</li>
+    </ul>
+  </div>
+
+  <div class="option" data-choice="B" onclick="selectOption(this)">
+    <div class="option-label">方案 B：下拉菜单 <span class="rec-badge">推荐</span></div>
+    <div class="preview">
+      <div class="dropdown-wrapper">
+        <button class="dropdown-trigger">
+          <span>🌙</span>
+          <span>深色</span>
+          <span>▾</span>
+        </button>
+        <div class="dropdown-menu">
+          <button class="dropdown-item active">
+            <span>🌙</span><span>深色</span><span class="check">✓</span>
+          </button>
+          <button class="dropdown-item">
+            <span>☀️</span><span>浅色</span>
+          </button>
+          <button class="dropdown-item">
+            <span>💻</span><span>系统</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="desc">点击按钮展开下拉菜单，直接选择目标主题</div>
+    <ul class="pros">
+      <li>一目了然，所有选项可见</li>
+      <li>可直接跳转到任意主题</li>
+      <li>与 open-webui 一致</li>
+    </ul>
+    <ul class="cons">
+      <li>需要两次点击（展开+选择）</li>
+      <li>实现稍复杂</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+function selectOption(el) {
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const choice = el.dataset.choice;
+  fetch('/api/select', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ choice }) });
+}
+</script>
+
+</body>
+</html>
