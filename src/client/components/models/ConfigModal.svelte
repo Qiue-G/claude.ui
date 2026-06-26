@@ -11,12 +11,12 @@
   const dispatch = createEventDispatcher();
 
   let activeTab = 'add';
-  let formData = $state({
+  let formData = {
     name: '',
     provider: 'openrouter',
     model: '',
     apiKey: ''
-  });
+  };
   let availableModels = [];
   let loadingModels = false;
   let customModel = false;
@@ -140,7 +140,7 @@
 
     {#if activeTab === 'add'}
       <div class="tab-content">
-        <form class="add-form" onsubmit={(e) => { e.preventDefault(); handleAddModel(); }}>
+        <form class="add-form" on:submit|preventDefault={handleAddModel}>
           <div class="form-group">
             <label for="name">{$t('model.name')}</label>
             <input id="name" type="text" bind:value={formData.name} placeholder={$t('model.namePlaceholder')} />
