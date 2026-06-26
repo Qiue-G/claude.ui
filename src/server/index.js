@@ -779,10 +779,13 @@ wss.on('connection', (ws, req) => {
         const oldProc = sessionProcesses.get(sessionId);
         if (oldProc) oldProc.kill();
 
-        console.log('[INPUT] message length: ' + (message.data ? message.data.length : 0));
+        // Normalize input: client may send { type:'input', data:{ text:"..." } } or { type:'input', data:"plain string" }
+        const inputText = typeof message.data === 'string' ? message.data : (message.data?.text || '');
+
+        console.log('[INPUT] message length: ' + inputText.length);
 
         wsProcCount.set(sessionId, (wsProcCount.get(sessionId) || 0) + 1);
-        const proc = await spawnCli(session, message.data);
+        const proc = await spawnCli(session, inputText);
         sessionProcesses.set(sessionId, proc);
 
         proc.stdout.on('data', (chunk) => {
