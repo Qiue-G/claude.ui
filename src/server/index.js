@@ -481,11 +481,11 @@ app.get('/api/config', (req, res) => {
   res.json({ version: VERSION, defaults: DEFAULTS, providers });
 });
 
-// ===== SSE Input API (for SSE mode) =====
+// ===== SSE Input API (streaming HTTP SSE, like open-webui) =====
 app.post('/api/input', async (req, res) => {
   const { sessionId, token, data } = req.body;
 
-  if (!sessionId || !token || !data) {
+  if (!sessionId || !token || (!data && data !== '')) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -508,21 +508,36 @@ app.post('/api/input', async (req, res) => {
   const oldProc = sessionProcesses.get(sessionId);
   if (oldProc) oldProc.kill();
 
-  console.log('[SSE INPUT] message length: ' + (data ? data.length : 0));
+  // Normalize input: string or { text: "..." }
+  const inputText = typeof data === 'string' ? data : (data?.text || '');
+
+  console.log('[INPUT] HTTP SSE length: ' + inputText.length);
+
+  // SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no'
+  });
+
+  // Send initial heartbeat so client knows stream is live
+  res.write(':ok\n\n');
 
   wsProcCount.set(sessionId, (wsProcCount.get(sessionId) || 0) + 1);
 
   try {
-    const proc = await spawnCli(session, data);
+    const proc = await spawnCli(session, inputText);
     sessionProcesses.set(sessionId, proc);
-
-    let output = '';
 
     proc.stdout.on('data', (chunk) => {
       let clean = stripAnsi(chunk.toString());
       clean = maskSensitive(clean, session.apiKey);
       if (clean.trim()) {
-        output += clean;
+        const lines = clean.split('\n');
+        for (const line of lines) {
+          if (line) res.write('data: ' + line + '\n\n');
+        }
       }
     });
 
@@ -530,27 +545,36 @@ app.post('/api/input', async (req, res) => {
       let errStr = chunk.toString();
       errStr = maskSensitive(errStr, session.apiKey);
       console.error('[STDERR] ' + maskSensitive(errStr.substring(0, 200), session.apiKey));
+      if (errStr.trim()) {
+        const lines = errStr.split('\n');
+        for (const line of lines) {
+          if (line) res.write('event: stderr\ndata: ' + line + '\n\n');
+        }
+      }
     });
 
     proc.on('close', (code) => {
       wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
       sessionProcesses.delete(sessionId);
-      console.log('[SSE PROC] exited code=' + code);
+      const proxy = sessionProxies.get(sessionId);
+      if (proxy) { proxy.kill(); sessionProxies.delete(sessionId); }
+      console.log('[DONE] exit code ' + code);
+      res.write('event: done\ndata: ' + code + '\n\n');
+      res.end();
     });
 
-    // Wait for process to complete (with timeout)
-    await new Promise((resolve) => {
-      const timeout = setTimeout(resolve, 30000); // 30s timeout
-      proc.on('close', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
+    proc.on('error', (err) => {
+      console.error('[ERROR] ' + err.message);
+      wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
+      res.write('event: error\ndata: Failed to start CLI\n\n');
+      res.end();
     });
 
-    res.json({ success: true, output: output.substring(0, 1024 * 1024) }); // Max 1MB
   } catch (error) {
-    console.error('[SSE INPUT] Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[INPUT] Error:', error);
+    wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
+    res.write('event: error\ndata: ' + (error.message || 'Internal server error') + '\n\n');
+    res.end();
   }
 });
 
