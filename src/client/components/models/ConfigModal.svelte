@@ -20,6 +20,23 @@
   let availableModels = [];
   let loadingModels = false;
 
+  const FALLBACK_MODELS = {
+    openrouter: [
+      'nvidia/nemotron-3-ultra-550b-a55b:free',
+      'google/gemini-2.0-flash-lite-001',
+      'deepseek/deepseek-chat-v3-0324:free',
+      'meta-llama/llama-4-maverick:free',
+      'anthropic/claude-haiku-4.5',
+      'anthropic/claude-sonnet-4',
+      'anthropic/claude-opus-4',
+      'google/gemini-2.5-pro',
+      'openai/gpt-4.1'
+    ],
+    deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+    anthropic: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', 'claude-opus-4-20250514', 'claude-3-5-sonnet-20241022'],
+    openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'o3-mini']
+  };
+
   const providers = [
     { value: 'openrouter', label: 'OpenRouter' },
     { value: 'anthropic', label: 'Anthropic' },
@@ -36,9 +53,12 @@
     try {
       const response = await fetchModels(formData.provider);
       availableModels = response.models || [];
+      if (availableModels.length === 0) {
+        availableModels = FALLBACK_MODELS[formData.provider] || [];
+      }
     } catch (error) {
       console.error('Failed to load models:', error);
-      availableModels = [];
+      availableModels = FALLBACK_MODELS[formData.provider] || [];
     } finally {
       loadingModels = false;
     }
@@ -134,7 +154,9 @@
               <select id="model" bind:value={formData.model}>
                 <option value="">{$t('model.selectModel')}</option>
                 {#each availableModels as m}
-                  <option value={m.id}>{m.id}</option>
+                  <option value={typeof m === 'string' ? m : m.id}>
+                    {typeof m === 'string' ? m : (m.name || m.id)}
+                  </option>
                 {/each}
               </select>
               <input type="text" bind:value={formData.model} placeholder={$t('model.modelPlaceholder')} class="model-input-manual" />
