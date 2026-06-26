@@ -19,21 +19,22 @@
   };
   let availableModels = [];
   let loadingModels = false;
+  let customModel = false;
 
   const FALLBACK_MODELS = {
     openrouter: [
+      'anthropic/claude-sonnet-4',
+      'anthropic/claude-opus-4',
+      'openai/gpt-4o',
+      'google/gemini-2.5-pro',
       'nvidia/nemotron-3-ultra-550b-a55b:free',
       'google/gemini-2.0-flash-lite-001',
       'deepseek/deepseek-chat-v3-0324:free',
-      'meta-llama/llama-4-maverick:free',
       'anthropic/claude-haiku-4.5',
-      'anthropic/claude-sonnet-4',
-      'anthropic/claude-opus-4',
-      'google/gemini-2.5-pro',
       'openai/gpt-4.1'
     ],
-    deepseek: ['deepseek-chat', 'deepseek-reasoner'],
-    anthropic: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', 'claude-opus-4-20250514', 'claude-3-5-sonnet-20241022'],
+    deepseek: ['deepseek-v4-pro', 'deepseek-v4-flash', 'deepseek-chat', 'deepseek-reasoner'],
+    anthropic: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
     openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'o3-mini']
   };
 
@@ -66,11 +67,18 @@
 
   function handleProviderChange() {
     formData.model = '';
+    customModel = false;
     loadAvailableModels();
   }
 
   function handleModelSelect(modelId) {
-    formData.model = modelId;
+    if (modelId === '__custom__') {
+      customModel = true;
+      formData.model = '';
+    } else {
+      customModel = false;
+      formData.model = modelId;
+    }
   }
 
   async function handleAddModel() {
@@ -114,6 +122,7 @@
   function handleClose() {
     open = false;
     formData = { name: '', provider: 'openrouter', model: '', apiKey: '' };
+    customModel = false;
     dispatch('close');
   }
 </script>
@@ -151,15 +160,18 @@
             {#if loadingModels}
               <div class="loading">{$t('common.loading')}...</div>
             {:else}
-              <select id="model" bind:value={formData.model}>
+              <select id="model" bind:value={formData.model} on:change={(e) => handleModelSelect(e.target.value)}>
                 <option value="">{$t('model.selectModel')}</option>
                 {#each availableModels as m}
                   <option value={typeof m === 'string' ? m : m.id}>
                     {typeof m === 'string' ? m : (m.name || m.id)}
                   </option>
                 {/each}
+                <option value="__custom__" style="color:var(--amber);">自定义模型...</option>
               </select>
-              <input type="text" bind:value={formData.model} placeholder={$t('model.modelPlaceholder')} class="model-input-manual" />
+              {#if customModel}
+                <input type="text" bind:value={formData.model} placeholder={$t('model.modelPlaceholder')} class="model-input-manual" />
+              {/if}
             {/if}
           </div>
 
