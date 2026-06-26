@@ -43,7 +43,7 @@ export function connectWebSocket(sid, token, autoReconnect = true, useSSE = fals
 
 function connectWebSocketProtocol(sid, token, autoReconnect) {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const url = `${protocol}//${location.host}/ws?sessionId=${sid}&token=${token}`;
+  const url = `${protocol}//${location.host}/ws`;
 
   ws = new WebSocket(url);
 
@@ -179,6 +179,11 @@ export function sendInput(data) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, sessionId: null, token: null, data: text })
     }).catch(err => console.error('Failed to send input:', err));
+  } else {
+    // WebSocket not open, reset waiting state to prevent UI hang
+    console.error('[sendInput] WebSocket not open, resetting isWaiting');
+    isWaiting.set(false);
+    isTyping.set(false);
   }
 }
 
