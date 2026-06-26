@@ -122,16 +122,23 @@
 
   onMount(async () => {
     await initChatHistory();
+    // Auto-reconnect: call /api/session to create a fresh session (server sessions are ephemeral)
     if ($activeModelId && $savedModels.length > 0) {
       const m = $savedModels.find(m => m.id === $activeModelId);
-      if (m) showToast('已加载模型: ' + m.name, 'success');
-    }
-    // Auto-reconnect if we have a stored session from previous visit
-    const sid = get(sessionId);
-    const token = get(sessionToken);
-    if (sid && token) {
-      connectWebSocket(sid, token, true);
-      showToast('自动重连中...', 'success');
+      if (m) {
+        try {
+          const session = await apiCreateSession(m.apiKey, m.model, m.provider);
+          sessionId.set(session.sessionId);
+          sessionToken.set(session.token);
+          if (session.csrfToken) csrfToken.set(session.csrfToken);
+          connectWebSocket(session.sessionId, session.token, true);
+          showToast('已自动连接: ' + m.name, 'success');
+        } catch (err) {
+          showToast('自动连接失败: ' + (err.message || '未知错误'), 'error');
+          // Clear stored session so we don't keep failing
+          clearSession();
+        }
+      }
     }
     window.addEventListener('keydown', handleGlobalKeydown);
     window.addEventListener('mousemove', handleResizeMove);
