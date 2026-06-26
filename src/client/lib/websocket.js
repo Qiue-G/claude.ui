@@ -165,26 +165,103 @@ function bufferSSEContent(text) {
   }
 }
 
-export function sendInput(data) {
-  // 支持字符串（兼容旧代码）或对象 { text, params }
-  const payload = typeof data === 'string'
-    ? { type: 'input', data: { text: data } }
-    : { type: 'input', data };
+let _sending = false;
 
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(payload));
-  } else if (eventSource && eventSource.readyState === EventSource.OPEN) {
-    // For SSE, we need to send via HTTP POST to /api/input
-    fetch('/api/input', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload.data)
-    }).catch(err => console.error('Failed to send input:', err));
-  } else {
-    // WebSocket not connected - reset waiting state to prevent spinner lock
+export async function sendInput(data) {
+  const text = typeof data === 'string' ? data : (data?.text || '');
+  if (!text) return;
+
+  if (_sending) {
     isWaiting.set(false);
     isTyping.set(false);
-    addMessage('system', '连接已断开，请刷新页面重试');
+    addMessage('system', '请等待当前回复完成');
+    return;
+  }
+
+  const sid = get(sessionId);
+  const tok = get(sessionToken);
+
+  if (!sid || !tok) {
+    isWaiting.set(false);
+    isTyping.set(false);
+    addMessage('system', '会话未建立，请先连接模型');
+    return;
+  }
+
+  _sending = true;
+
+  try {
+    const response = await fetch('/api/input', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: sid, token: tok, data: { text } })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'HTTP ' + response.status);
+    }
+
+    // Read SSE stream
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let eventType = 'message';
+    let dataLines = [];
+
+    function flushEvent() {
+      const content = dataLines.join('\n');
+      dataLines = [];
+      switch (eventType) {
+        case 'done':
+          isWaiting.set(false);
+          isTyping.set(false);
+          break;
+        case 'error':
+          isWaiting.set(false);
+          isTyping.set(false);
+          if (content) addMessage('system', stripAnsi(content));
+          break;
+        case 'stderr':
+          if (content) appendToLastAssistant(stripAnsi(content));
+          break;
+        default:
+          if (content) appendToLastAssistant(stripAnsi(content));
+      }
+      eventType = 'message';
+    }
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line === '') {
+          flushEvent();
+        } else if (line.startsWith('event: ')) {
+          eventType = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          dataLines.push(line.slice(6));
+        } else if (line.startsWith(':')) {
+          // SSE comment / heartbeat, ignore
+        }
+      }
+    }
+    // Flush any remaining event
+    if (dataLines.length > 0 || eventType !== 'message') {
+      flushEvent();
+    }
+  } catch (err) {
+    console.error('sendInput error:', err);
+    isWaiting.set(false);
+    isTyping.set(false);
+    addMessage('system', '发送失败: ' + (err.message || '未知错误'));
+  } finally {
+    _sending = false;
   }
 }
 
