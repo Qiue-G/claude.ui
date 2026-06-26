@@ -19,6 +19,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # Copy app files
+COPY agent-config.json ./
 COPY src/ ./src/
 COPY vite.config.js svelte.config.js ./
 
