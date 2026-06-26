@@ -2,7 +2,7 @@
  * WebSocket Manager - handles real-time communication with server
  * Supports both WebSocket and SSE for streaming responses
  */
-import { isConnected, connectionStatus, sessionId, sessionToken, clearSession } from '$stores/session.store.js';
+import { isConnected, connectionStatus, sessionId, sessionToken } from '$stores/session.store.js';
 import { addMessage, appendToLastAssistant, isWaiting, isTyping } from '$stores/chat.store.js';
 import { stripAnsi } from '$lib/utils.js';
 import { get } from 'svelte/store';
@@ -166,9 +166,10 @@ function bufferSSEContent(text) {
 }
 
 export function sendInput(data) {
-  // Extract text string (like claude.free does)
-  const text = typeof data === 'string' ? data : (data.text || '');
-  const payload = { type: 'input', data: text };
+  // 支持字符串（兼容旧代码）或对象 { text, params }
+  const payload = typeof data === 'string'
+    ? { type: 'input', data: { text: data } }
+    : { type: 'input', data };
 
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
@@ -177,13 +178,13 @@ export function sendInput(data) {
     fetch('/api/input', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, sessionId: null, token: null, data: text })
+      body: JSON.stringify(payload.data)
     }).catch(err => console.error('Failed to send input:', err));
   } else {
-    // WebSocket not open, reset waiting state to prevent UI hang
-    console.error('[sendInput] WebSocket not open, resetting isWaiting');
+    // WebSocket not connected - reset waiting state to prevent spinner lock
     isWaiting.set(false);
     isTyping.set(false);
+    addMessage('system', '连接已断开，请刷新页面重试');
   }
 }
 
@@ -229,13 +230,14 @@ function handleServerMessage(msg) {
       isTyping.set(false);
       break;
     case 'error':
-    case 'stderr':
       isWaiting.set(false);
       isTyping.set(false);
-      addMessage('system', msg.message || msg.data || 'Unknown error');
-      // Clear stored session if server indicates it's invalid (e.g. server restarted)
-      if (msg.message && /invalid session/i.test(msg.message)) {
-        clearSession();
+      addMessage('system', msg.message || 'Unknown error');
+      break;
+    case 'stderr':
+      // Server-side stderr - log but don't reset waiting
+      if (msg.data) {
+        appendToLastAssistant(stripAnsi(msg.data));
       }
       break;
     case 'model_update':
