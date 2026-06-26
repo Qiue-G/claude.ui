@@ -166,10 +166,9 @@ function bufferSSEContent(text) {
 }
 
 export function sendInput(data) {
-  // 支持字符串（兼容旧代码）或对象 { text, params }
-  const payload = typeof data === 'string'
-    ? { type: 'input', data: { text: data } }
-    : { type: 'input', data };
+  // Extract text string (like claude.free does)
+  const text = typeof data === 'string' ? data : (data.text || '');
+  const payload = { type: 'input', data: text };
 
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
@@ -178,7 +177,7 @@ export function sendInput(data) {
     fetch('/api/input', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload.data)
+      body: JSON.stringify({ text, sessionId: null, token: null, data: text })
     }).catch(err => console.error('Failed to send input:', err));
   }
 }
