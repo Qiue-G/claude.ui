@@ -9,14 +9,13 @@
   import CommandPalette from '$components/common/CommandPalette.svelte';
   import Toast from '$components/common/Toast.svelte';
 
-  import { isConnected, clearSession } from '$stores/session.store.js';
+  import { isConnected } from '$stores/session.store.js';
   import { activeModelId, savedModels } from '$stores/models.store.js';
   import { fileContents, fileTree } from '$stores/files.store.js';
   import { messages, isWaiting, addMessage } from '$stores/chat.store.js';
   import { initChatHistory, createSession } from '$stores/chatHistory.store.js';
   import { chatSidebarOpen, fileSidebarOpen, toggleChatSidebar, toggleFileSidebar, openCommandPalette, showToast } from '$stores/ui.store.js';
   import { toggleTheme } from '$stores/theme.store.js';
-  import { get } from 'svelte/store';
   import { connectWebSocket, sendInput } from '$lib/websocket.js';
   import { createSession as apiCreateSession } from '$apis/session.api.js';
   import { sessionId, sessionToken, csrfToken } from '$stores/session.store.js';
@@ -114,7 +113,7 @@
     const files = typeof data === 'object' ? (data.files || []) : [];
     const images = typeof data === 'object' ? (data.images || []) : [];
     if (!text || !text.trim()) return;
-    if (!$isConnected) { addMessage('system', '请先连接模型'); return; }
+    if (!$sessionId) { addMessage('system', '请先连接模型'); return; }
     addMessage('user', text);
     isWaiting.set(true);
     sendInput({ text, files, images });
@@ -122,7 +121,7 @@
 
   onMount(async () => {
     await initChatHistory();
-    // Auto-reconnect: call /api/session to create a fresh session (server sessions are ephemeral)
+    // Auto-reconnect on page load
     if ($activeModelId && $savedModels.length > 0) {
       const m = $savedModels.find(m => m.id === $activeModelId);
       if (m) {
@@ -135,8 +134,6 @@
           showToast('已自动连接: ' + m.name, 'success');
         } catch (err) {
           showToast('自动连接失败: ' + (err.message || '未知错误'), 'error');
-          // Clear stored session so we don't keep failing
-          clearSession();
         }
       }
     }
