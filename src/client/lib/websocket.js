@@ -225,9 +225,10 @@ function handleServerMessage(msg) {
       isTyping.set(false);
       break;
     case 'error':
+    case 'stderr':
       isWaiting.set(false);
       isTyping.set(false);
-      addMessage('system', msg.message || 'Unknown error');
+      addMessage('system', msg.message || msg.data || 'Unknown error');
       // Clear stored session if server indicates it's invalid (e.g. server restarted)
       if (msg.message && /invalid session/i.test(msg.message)) {
         clearSession();
