@@ -899,17 +899,6 @@ wss.on('connection', (ws, req) => {
         clients.delete(ws);
         if (clients.size === 0) {
           sessionClients.delete(sessionId);
-          // All clients gone: kill process after 30s grace period
-          const orphanProc = sessionProcesses.get(sessionId);
-          const orphanProxy = sessionProxies.get(sessionId);
-          if (orphanProc || orphanProxy) {
-            setTimeout(() => {
-              if (!sessionClients.has(sessionId)) {
-                if (orphanProc) { orphanProc.kill(); sessionProcesses.delete(sessionId); }
-                if (orphanProxy) { orphanProxy.kill(); sessionProxies.delete(sessionId); }
-              }
-            }, 30000);
-          }
         }
       }
     }
