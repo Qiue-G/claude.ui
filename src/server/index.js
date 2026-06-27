@@ -875,12 +875,24 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     if (sessionId) {
       const clients = sessionClients.get(sessionId);
-      if (clients) { clients.delete(ws); if (clients.size === 0) sessionClients.delete(sessionId); }
+      if (clients) {
+        clients.delete(ws);
+        if (clients.size === 0) {
+          sessionClients.delete(sessionId);
+          // All clients gone: kill process after 30s grace period
+          const orphanProc = sessionProcesses.get(sessionId);
+          const orphanProxy = sessionProxies.get(sessionId);
+          if (orphanProc || orphanProxy) {
+            setTimeout(() => {
+              if (!sessionClients.has(sessionId)) {
+                if (orphanProc) { orphanProc.kill(); sessionProcesses.delete(sessionId); }
+                if (orphanProxy) { orphanProxy.kill(); sessionProxies.delete(sessionId); }
+              }
+            }, 30000);
+          }
+        }
+      }
     }
-    const proc = sessionProcesses.get(sessionId);
-    if (proc) { proc.kill(); sessionProcesses.delete(sessionId); }
-    const proxy = sessionProxies.get(sessionId);
-    if (proxy) { proxy.kill(); sessionProxies.delete(sessionId); }
   });
 });
 
