@@ -42,7 +42,6 @@
     const images = typeof detail === 'object' ? (detail.images || []) : [];
 
     if (!text || !text.trim()) return;
-    addMessage('user', text.trim());
     onsend?.({ text: text.trim(), files, images });
   }
 
@@ -86,7 +85,6 @@
       on:retry={handleRetryMessage}
       on:rate={handleRateMessage}
       on:suggestion={(e) => {
-        addMessage('user', e.detail);
         onsend?.(e.detail);
       }}
       {suggestions}
