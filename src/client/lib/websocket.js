@@ -47,12 +47,9 @@ function connectWebSocketProtocol(sid, token, autoReconnect) {
 
   ws = new WebSocket(url);
 
-  let initTimeout = null;
-  let initDone = false;
-
   ws.onopen = () => {
-    // Don't set connected yet - wait for server 'ready' ack
-    connectionStatus.set('connecting');
+    isConnected.set(true);
+    connectionStatus.set('connected');
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -63,14 +60,6 @@ function connectWebSocketProtocol(sid, token, autoReconnect) {
       sessionId: sid,
       token: token
     }));
-    // Timeout: if no 'ready' within 8s, close and reconnect
-    initTimeout = setTimeout(() => {
-      if (!initDone) {
-        console.warn('[WS] init timeout, closing');
-        initDone = true;
-        ws.close();
-      }
-    }, 8000);
   };
 
   ws.onmessage = (event) => {
@@ -267,23 +256,6 @@ export async function sendInput(data) {
     // Flush any remaining event
     if (dataLines.length > 0 || eventType !== 'message') {
       flushEvent();
-    } else {
-      // Empty stream: fetch server health for cli-dev diagnostics
-      try {
-        const hr = await fetch('/api/health');
-        const hd = await hr.json();
-        if (hd.cliDev && !hd.cliDev.exists) {
-          addMessage('system', 'cli-dev 文件不存在');
-        } else if (hd.cliDev && !hd.cliDev.executable) {
-          addMessage('system', 'cli-dev 无执行权限');
-        } else {
-          addMessage('system', 'CLI 无输出，请检查 API Key 和模型配置');
-        }
-      } catch(e) {
-        addMessage('system', 'CLI 无输出，且无法获取诊断信息');
-      }
-      isWaiting.set(false);
-      isTyping.set(false);
     }
   } catch (err) {
     console.error('sendInput error:', err);
@@ -324,11 +296,9 @@ export function disconnectWebSocket() {
 function handleServerMessage(msg) {
   switch (msg.type) {
     case 'ready':
-      // Server acknowledged our init - now truly connected
+      // Server acknowledged init - reset reconnect counter
       reconnectAttempts = 0;
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-      if (initTimeout) { clearTimeout(initTimeout); initTimeout = null; }
-      initDone = true;
       isConnected.set(true);
       connectionStatus.set('connected');
       break;
@@ -349,6 +319,11 @@ function handleServerMessage(msg) {
       isWaiting.set(false);
       isTyping.set(false);
       addMessage('system', msg.message || 'Unknown error');
+      // Stop reconnecting on auth/session errors
+      if (msg.message && /invalid|expired/i.test(msg.message)) {
+        autoReconnectEnabled = false;
+        reconnectAttempts = MAX_RECONNECT_ATTEMPTS;
+      }
       break;
     case 'stderr':
       // Server-side stderr - log but don't reset waiting
@@ -363,4 +338,3 @@ function handleServerMessage(msg) {
       break;
   }
 }
-
