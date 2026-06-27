@@ -1,9 +1,10 @@
 <script>
-  import { messages, addMessage, updateMessage } from '$stores/chat.store.js';
+  import { messages, updateMessage } from '$stores/chat.store.js';
   import {
     currentSession,
     createSession
   } from '$stores/chatHistory.store.js';
+  import { setToolEnabled } from '$stores/tools.store.js';
   import {
     paramsPanelOpen,
     controlsPanelOpen,
