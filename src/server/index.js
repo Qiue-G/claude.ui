@@ -241,7 +241,7 @@ async function startProxy(session) {
 
 async function spawnCli(session, prompt) {
   const cliPath = join(FREE_CODE_DIR, 'cli-dev');
-  if (!require('fs').existsSync(cliPath)) {
+  if (!existsSync(cliPath)) {
     throw new Error('cli-dev not found: ' + cliPath);
   }
   const cliArgs = ['-p', '--bare'];
