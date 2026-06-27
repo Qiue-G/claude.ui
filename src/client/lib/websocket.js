@@ -47,9 +47,12 @@ function connectWebSocketProtocol(sid, token, autoReconnect) {
 
   ws = new WebSocket(url);
 
+  let initTimeout = null;
+  let initDone = false;
+
   ws.onopen = () => {
-    isConnected.set(true);
-    connectionStatus.set('connected');
+    // Don't set connected yet - wait for server 'ready' ack
+    connectionStatus.set('connecting');
     reconnectAttempts = 0;
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
@@ -61,6 +64,14 @@ function connectWebSocketProtocol(sid, token, autoReconnect) {
       sessionId: sid,
       token: token
     }));
+    // Timeout: if no 'ready' within 8s, close and reconnect
+    initTimeout = setTimeout(() => {
+      if (!initDone) {
+        console.warn('[WS] init timeout, closing');
+        initDone = true;
+        ws.close();
+      }
+    }, 8000);
   };
 
   ws.onmessage = (event) => {
@@ -314,6 +325,13 @@ export function disconnectWebSocket() {
 
 function handleServerMessage(msg) {
   switch (msg.type) {
+    case 'ready':
+      // Server acknowledged our init - now truly connected
+      if (initTimeout) { clearTimeout(initTimeout); initTimeout = null; }
+      initDone = true;
+      isConnected.set(true);
+      connectionStatus.set('connected');
+      break;
     case 'output':
       appendToLastAssistant(stripAnsi(msg.data || ''));
       break;
