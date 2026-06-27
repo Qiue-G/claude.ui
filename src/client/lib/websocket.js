@@ -53,7 +53,6 @@ function connectWebSocketProtocol(sid, token, autoReconnect) {
   ws.onopen = () => {
     // Don't set connected yet - wait for server 'ready' ack
     connectionStatus.set('connecting');
-    reconnectAttempts = 0;
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -121,7 +120,6 @@ function connectSSE(sid, token, autoReconnect) {
   eventSource.onopen = () => {
     isConnected.set(true);
     connectionStatus.set('connected');
-    reconnectAttempts = 0;
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -327,6 +325,8 @@ function handleServerMessage(msg) {
   switch (msg.type) {
     case 'ready':
       // Server acknowledged our init - now truly connected
+      reconnectAttempts = 0;
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
       if (initTimeout) { clearTimeout(initTimeout); initTimeout = null; }
       initDone = true;
       isConnected.set(true);
