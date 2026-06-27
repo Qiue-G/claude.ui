@@ -259,8 +259,20 @@ export async function sendInput(data) {
     if (dataLines.length > 0 || eventType !== 'message') {
       flushEvent();
     } else {
-      // Empty stream: CLI produced zero output (likely cli-dev missing or crashed)
-      addMessage('system', 'CLI 进程无任何输出，请检查 /free-code/cli-dev 是否已正确部署');
+      // Empty stream: fetch server health for cli-dev diagnostics
+      try {
+        const hr = await fetch('/api/health');
+        const hd = await hr.json();
+        if (hd.cliDev && !hd.cliDev.exists) {
+          addMessage('system', 'cli-dev 文件不存在');
+        } else if (hd.cliDev && !hd.cliDev.executable) {
+          addMessage('system', 'cli-dev 无执行权限');
+        } else {
+          addMessage('system', 'CLI 无输出，请检查 API Key 和模型配置');
+        }
+      } catch(e) {
+        addMessage('system', 'CLI 无输出，且无法获取诊断信息');
+      }
       isWaiting.set(false);
       isTyping.set(false);
     }
