@@ -1,6 +1,5 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-import { get } from 'svelte/store';
   import Toolbar from '$components/common/Toolbar.svelte';
   import FileTree from '$components/files/FileTree.svelte';
   import ChatPanel from '$components/chat/ChatPanel.svelte';
@@ -13,14 +12,12 @@ import { get } from 'svelte/store';
   import { isConnected } from '$stores/session.store.js';
   import { activeModelId, savedModels } from '$stores/models.store.js';
   import { fileContents, fileTree } from '$stores/files.store.js';
-  import { messages, isWaiting, isTyping, addMessage } from '$stores/chat.store.js';
-import { enabledTools, setToolEnabled } from '$stores/tools.store.js';
-  import { initChatHistory, createSession, currentSessionId } from '$stores/chatHistory.store.js';
+  import { messages, isWaiting, addMessage } from '$stores/chat.store.js';
+  import { initChatHistory, createSession } from '$stores/chatHistory.store.js';
   import { chatSidebarOpen, fileSidebarOpen, toggleChatSidebar, toggleFileSidebar, openCommandPalette, showToast } from '$stores/ui.store.js';
   import { toggleTheme } from '$stores/theme.store.js';
   import { connectWebSocket, sendInput } from '$lib/websocket.js';
   import { createSession as apiCreateSession } from '$apis/session.api.js';
-import { getFileTree } from '$apis/files.api.js';
   import { sessionId, sessionToken, csrfToken } from '$stores/session.store.js';
 
   let showConfigModal = $state(false);
@@ -96,21 +93,6 @@ import { getFileTree } from '$apis/files.api.js';
     showToast('保存功能暂不可用', 'error');
   }
 
-  // ===== File loading =====
-
-  async function loadFileTree(sid, tok) {
-    try {
-      const result = await getFileTree(sid, tok);
-      if (result && result.tree) {
-        fileTree.set(result.tree);
-      }
-    } catch (err) {
-      console.error('loadFileTree failed:', err);
-    }
-  }
-
-  // ===== Handle connect =====
-
   async function handleConnectModel(e) {
     const model = e.detail;
     try {
@@ -121,82 +103,39 @@ import { getFileTree } from '$apis/files.api.js';
       connectWebSocket(session.sessionId, session.token);
       showToast('已连接: ' + model.name, 'success');
       showConfigModal = false;
-      loadFileTree(session.sessionId, session.token);
     } catch (err) {
       showToast('连接失败: ' + (err.message || '未知错误'), 'error');
     }
   }
 
-  let sendTimeout = null;
-
-  // 监听 isWaiting 状态实现 60s 超时
-  const unsubIsWaiting = isWaiting.subscribe(val => {
-    if (val) {
-      sendTimeout = setTimeout(() => {
-        isWaiting.set(false);
-        isTyping.set(false);
-        addMessage('system', '请求超时，请重试');
-        sendTimeout = null;
-      }, 60000);
-    } else {
-      if (sendTimeout) {
-        clearTimeout(sendTimeout);
-        sendTimeout = null;
-      }
-    }
-  });
-
-  async function handleChatSend(data) {
+  function handleChatSend(data) {
     const text = typeof data === 'string' ? data : data.text;
     const files = typeof data === 'object' ? (data.files || []) : [];
     const images = typeof data === 'object' ? (data.images || []) : [];
-    if ((!text || !text.trim()) && files.length === 0 && images.length === 0) return;
-    if (!$isConnected) { addMessage('system', '请先连接模型'); return; }
-    if (!get(currentSessionId)) {
-      createSession('新对话');
-    }
-    let fileContent = '';
-    if (files.length > 0) {
-      const parts = [];
-      for (const file of files) {
-        try {
-          const content = await file.text();
-          parts.push(`--- ${file.name} ---
-${content}`);
-        } catch (e) {
-          parts.push(`--- ${file.name} ---
-[无法读取文件内容: ${e.message}]`);
-        }
-      }
-      fileContent = parts.join('
-
-');
-    }
-    let imageContent = '';
-    if (images.length > 0) {
-      imageContent = '
-
-[包含图片]';
-    }
-    const fullText = [text.trim(), fileContent].filter(Boolean).join('
-
-') + imageContent;
-    addMessage('user', fullText);
+    if (!text || !text.trim()) return;
+    if (!$sessionId) { addMessage('system', '请先连接模型'); return; }
+    addMessage('user', text);
     isWaiting.set(true);
-    sendInput({ text: fullText, files: [], images, tools: get(enabledTools) });
+    sendInput({ text, files, images });
   }
 
   onMount(async () => {
     await initChatHistory();
-    const sid = $sessionId;
-    const token = $sessionToken;
-    if (sid && token) {
-      connectWebSocket(sid, token);
-      loadFileTree(sid, token);
-    }
+    // Auto-reconnect on page load
     if ($activeModelId && $savedModels.length > 0) {
       const m = $savedModels.find(m => m.id === $activeModelId);
-      if (m) showToast('已加载模型: ' + m.name, 'success');
+      if (m) {
+        try {
+          const session = await apiCreateSession(m.apiKey, m.model, m.provider);
+          sessionId.set(session.sessionId);
+          sessionToken.set(session.token);
+          if (session.csrfToken) csrfToken.set(session.csrfToken);
+          connectWebSocket(session.sessionId, session.token, true);
+          showToast('已自动连接: ' + m.name, 'success');
+        } catch (err) {
+          showToast('自动连接失败: ' + (err.message || '未知错误'), 'error');
+        }
+      }
     }
     window.addEventListener('keydown', handleGlobalKeydown);
     window.addEventListener('mousemove', handleResizeMove);
@@ -204,7 +143,6 @@ ${content}`);
   });
 
   onDestroy(() => {
-    unsubIsWaiting();
     window.removeEventListener('keydown', handleGlobalKeydown);
     window.removeEventListener('mousemove', handleResizeMove);
     window.removeEventListener('mouseup', handleResizeEnd);
