@@ -241,6 +241,9 @@ async function startProxy(session) {
 
 async function spawnCli(session, prompt) {
   const cliPath = join(FREE_CODE_DIR, 'cli-dev');
+  if (!require('fs').existsSync(cliPath)) {
+    throw new Error('cli-dev not found: ' + cliPath);
+  }
   const cliArgs = ['-p', '--bare'];
   if (session.model) cliArgs.push('--model', session.model);
 
@@ -559,6 +562,9 @@ app.post('/api/input', async (req, res) => {
       const proxy = sessionProxies.get(sessionId);
       if (proxy) { proxy.kill(); sessionProxies.delete(sessionId); }
       console.log('[DONE] exit code ' + code);
+      if (code !== 0) {
+        res.write('event: stderr\ndata: CLI exit ' + code + '. Check API key and network.\n\n');
+      }
       res.write('event: done\ndata: ' + code + '\n\n');
       res.end();
     });
