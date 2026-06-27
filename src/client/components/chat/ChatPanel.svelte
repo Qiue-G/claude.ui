@@ -65,6 +65,12 @@
     }
   }
 
+
+  function handleToolChange(e) {
+    const { id, enabled } = e.detail;
+    setToolEnabled(id, enabled);
+  }
+
   function handleRateMessage(e) {
     const { id, rating } = e.detail;
     updateMessage(id, { rating });
@@ -100,10 +106,7 @@
       <ChatControls
         open={$controlsPanelOpen}
         on:close={() => controlsPanelOpen.set(false)}
-        on:change={(e) => {
-          const { id, enabled } = e.detail;
-          setToolEnabled(id, enabled);
-        }}
+        on:change={handleToolChange}
       />
       <ChatInput
         on:send={handleSend}
