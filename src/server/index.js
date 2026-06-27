@@ -830,10 +830,10 @@ wss.on('connection', (ws, req) => {
         proc.stdout.on('data', (chunk) => {
           let clean = stripAnsi(chunk.toString());
           clean = maskSensitive(clean, session.apiKey);
-          if (clean.trim() && ws.readyState === ws.OPEN) {
-            const MAX_WS_MSG = 1024 * 1024; // 1MB
+          if (clean.trim()) {
+            const MAX_WS_MSG = 1024 * 1024;
             const data = clean.length > MAX_WS_MSG ? clean.substring(0, MAX_WS_MSG) + '\n[output truncated]' : clean;
-            ws.send(JSON.stringify({ type: 'output', data }));
+            broadcast(sessionId, { type: 'output', data });
           }
         });
 
@@ -841,39 +841,30 @@ wss.on('connection', (ws, req) => {
           let errStr = chunk.toString();
           errStr = maskSensitive(errStr, session.apiKey);
           console.error('[STDERR] ' + maskSensitive(errStr.substring(0, 200), session.apiKey));
-          if (ws.readyState === ws.OPEN) {
-            const MAX_WS_ERR = 1024 * 1024; // 1MB
-            const data = errStr.length > MAX_WS_ERR ? errStr.substring(0, MAX_WS_ERR) + '\n[output truncated]' : errStr;
-            ws.send(JSON.stringify({ type: 'stderr', data }));
-          }
+          const MAX_WS_ERR = 1024 * 1024;
+          const data = errStr.length > MAX_WS_ERR ? errStr.substring(0, MAX_WS_ERR) + '\n[output truncated]' : errStr;
+          broadcast(sessionId, { type: 'stderr', data });
         });
 
         proc.on('close', (code) => {
           console.log('[DONE] exit code ' + code);
           sessionProcesses.delete(sessionId);
           wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
-          // Kill proxy too
           const proxy = sessionProxies.get(sessionId);
           if (proxy) { proxy.kill(); sessionProxies.delete(sessionId); }
-          if (ws.readyState === ws.OPEN) {
-            ws.send(JSON.stringify({ type: 'exit', code }));
-          }
+          broadcast(sessionId, { type: 'exit', code });
         });
 
         proc.on('error', (err) => {
           console.error('[ERROR] ' + err.message);
           wsProcCount.set(sessionId, Math.max(0, (wsProcCount.get(sessionId) || 0) - 1));
-          if (ws.readyState === ws.OPEN) {
-            ws.send(JSON.stringify({ type: 'error', message: 'Failed to start CLI' }));
-          }
+          broadcast(sessionId, { type: 'error', message: 'Failed to start CLI' });
         });
       }
 
     } catch (error) {
       console.error('WebSocket error:', error);
-      if (ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Internal server error' }));
-      }
+      broadcast(sessionId, { type: 'error', message: 'Internal server error' });
     }
   });
 
