@@ -121,19 +121,27 @@
 
   onMount(async () => {
     await initChatHistory();
-    // Auto-reconnect on page load
+    // Reconnect using stored session if available, otherwise create new
     if ($activeModelId && $savedModels.length > 0) {
       const m = $savedModels.find(m => m.id === $activeModelId);
       if (m) {
-        try {
-          const session = await apiCreateSession(m.apiKey, m.model, m.provider);
-          sessionId.set(session.sessionId);
-          sessionToken.set(session.token);
-          if (session.csrfToken) csrfToken.set(session.csrfToken);
-          connectWebSocket(session.sessionId, session.token, true);
+        const storedSid = $sessionId;
+        const storedToken = $sessionToken;
+        if (storedSid && storedToken) {
+          // Reuse existing session from localStorage
+          connectWebSocket(storedSid, storedToken, true);
           showToast('已自动连接: ' + m.name, 'success');
-        } catch (err) {
-          showToast('自动连接失败: ' + (err.message || '未知错误'), 'error');
+        } else {
+          try {
+            const session = await apiCreateSession(m.apiKey, m.model, m.provider);
+            sessionId.set(session.sessionId);
+            sessionToken.set(session.token);
+            if (session.csrfToken) csrfToken.set(session.csrfToken);
+            connectWebSocket(session.sessionId, session.token, true);
+            showToast('已自动连接: ' + m.name, 'success');
+          } catch (err) {
+            showToast('自动连接失败: ' + (err.message || '未知错误'), 'error');
+          }
         }
       }
     }
