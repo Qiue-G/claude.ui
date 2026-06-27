@@ -1,10 +1,9 @@
 <script>
-  import { messages, updateMessage } from '$stores/chat.store.js';
+  import { messages, addMessage, updateMessage } from '$stores/chat.store.js';
   import {
     currentSession,
     createSession
   } from '$stores/chatHistory.store.js';
-  import { setToolEnabled } from '$stores/tools.store.js';
   import {
     paramsPanelOpen,
     controlsPanelOpen,
@@ -65,12 +64,6 @@
     }
   }
 
-
-  function handleToolChange(e) {
-    const { id, enabled } = e.detail;
-    setToolEnabled(id, enabled);
-  }
-
   function handleRateMessage(e) {
     const { id, rating } = e.detail;
     updateMessage(id, { rating });
@@ -106,7 +99,6 @@
       <ChatControls
         open={$controlsPanelOpen}
         on:close={() => controlsPanelOpen.set(false)}
-        on:change={handleToolChange}
       />
       <ChatInput
         on:send={handleSend}
