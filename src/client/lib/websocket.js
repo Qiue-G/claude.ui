@@ -233,10 +233,23 @@ export async function sendInput(data) {
       eventType = 'message';
     }
 
+    // Read with timeout: abort if no chunk arrives within 120s
+    let lastChunkTime = Date.now();
+    const READ_TIMEOUT = 120000; // 2 min
+
     while (true) {
+      if (Date.now() - lastChunkTime > READ_TIMEOUT) {
+        console.warn('SSE read timeout after ' + READ_TIMEOUT/1000 + 's');
+        isWaiting.set(false);
+        isTyping.set(false);
+        addMessage('system', '连接超时，请重试');
+        break;
+      }
+
       const { done, value } = await reader.read();
       if (done) break;
 
+      lastChunkTime = Date.now();
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
