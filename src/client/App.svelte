@@ -130,7 +130,7 @@ import { getFileTree } from '$apis/files.api.js';
   let sendTimeout = null;
 
   // 监听 isWaiting 状态实现 60s 超时
-  isWaiting.subscribe(val => {
+  const unsubIsWaiting = isWaiting.subscribe(val => {
     if (val) {
       sendTimeout = setTimeout(() => {
         isWaiting.set(false);
@@ -204,6 +204,7 @@ ${content}`);
   });
 
   onDestroy(() => {
+    unsubIsWaiting();
     window.removeEventListener('keydown', handleGlobalKeydown);
     window.removeEventListener('mousemove', handleResizeMove);
     window.removeEventListener('mouseup', handleResizeEnd);
