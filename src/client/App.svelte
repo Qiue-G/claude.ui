@@ -15,7 +15,7 @@ import { get } from 'svelte/store';
   import { fileContents, fileTree } from '$stores/files.store.js';
   import { messages, isWaiting, isTyping, addMessage } from '$stores/chat.store.js';
 import { enabledTools, setToolEnabled } from '$stores/tools.store.js';
-  import { initChatHistory, createSession } from '$stores/chatHistory.store.js';
+  import { initChatHistory, createSession, currentSessionId } from '$stores/chatHistory.store.js';
   import { chatSidebarOpen, fileSidebarOpen, toggleChatSidebar, toggleFileSidebar, openCommandPalette, showToast } from '$stores/ui.store.js';
   import { toggleTheme } from '$stores/theme.store.js';
   import { connectWebSocket, sendInput } from '$lib/websocket.js';
@@ -145,7 +145,7 @@ import { getFileTree } from '$apis/files.api.js';
     }
   });
 
-  function handleChatSend(data) {
+  async function handleChatSend(data) {
     const text = typeof data === 'string' ? data : data.text;
     const files = typeof data === 'object' ? (data.files || []) : [];
     const images = typeof data === 'object' ? (data.images || []) : [];
