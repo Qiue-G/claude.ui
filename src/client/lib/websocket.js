@@ -2,7 +2,7 @@
  * WebSocket Manager - handles real-time communication with server
  * Supports both WebSocket and SSE for streaming responses
  */
-import { isConnected, connectionStatus, sessionId, sessionToken } from '$stores/session.store.js';
+import { isConnected, connectionStatus, sessionId, sessionToken, clearSession } from '$stores/session.store.js';
 import { addMessage, appendToLastAssistant, isWaiting, isTyping } from '$stores/chat.store.js';
 import { stripAnsi } from '$lib/utils.js';
 import { get } from 'svelte/store';
@@ -165,6 +165,50 @@ function bufferSSEContent(text) {
 
 let _sending = false;
 
+
+async function autoReconnectAndRetry(text) {
+  clearSession();
+  isWaiting.set(false);
+  isTyping.set(false);
+  _sending = false;
+  addMessage('system', '会话已过期，正在自动重连...');
+
+  try {
+    // Dynamically import to avoid circular deps
+    const [{ savedModels, activeModelId }, { createSession }] = await Promise.all([
+      import('$stores/models.store.js'),
+      import('$apis/session.api.js')
+    ]);
+
+    const modelId = get(activeModelId);
+    const models = get(savedModels);
+    const model = models.find(m => m.id === modelId);
+
+    if (!model) {
+      addMessage('system', '未找到模型配置，请手动连接');
+      return;
+    }
+
+    const session = await createSession(model.apiKey, model.model, model.provider);
+    sessionId.set(session.sessionId);
+    sessionToken.set(session.token);
+
+    connectWebSocket(session.sessionId, session.token, true);
+    isConnected.set(true);
+    connectionStatus.set('connected');
+    addMessage('system', '重连成功，正在重发消息...');
+
+    // Retry the send
+    _sending = true;
+    addMessage('user', text);
+    isWaiting.set(true);
+    isTyping.set(true);
+    sendInput(text);
+  } catch (err) {
+    addMessage('system', '自动重连失败: ' + (err.message || '未知错误') + '，请刷新页面后手动连接');
+  }
+}
+
 export async function sendInput(data) {
   const text = typeof data === 'string' ? data : (data?.text || '');
   if (!text) return;
@@ -197,7 +241,15 @@ export async function sendInput(data) {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || 'HTTP ' + response.status);
+      const errMsg = err.error || 'HTTP ' + response.status;
+
+      // Auto-reconnect on invalid/expired session
+      if (/invalid|expired/i.test(errMsg)) {
+        await autoReconnectAndRetry(text);
+        return; // autoReconnectAndRetry handles everything
+      }
+
+      throw new Error(errMsg);
     }
 
     // Read SSE stream
