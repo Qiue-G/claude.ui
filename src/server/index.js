@@ -409,12 +409,21 @@ app.get('/api/models/:provider', (req, res) => {
 
 app.get('/api/health', (req, res) => {
   const mem = process.memoryUsage();
+  const cliPath = join(FREE_CODE_DIR, 'cli-dev');
+  let cliDev = { exists: false, executable: false, error: null };
+  try {
+    cliDev.exists = existsSync(cliPath);
+    if (cliDev.exists) {
+      try { require('fs').accessSync(cliPath, require('fs').constants.X_OK); cliDev.executable = true; } catch(e) {}
+    }
+  } catch(e) { cliDev.error = e.message; }
   res.json({
     status: 'ok',
     version: VERSION,
     sessions: sessions.size,
     maxSessions: MAX_SESSIONS,
     uptime: process.uptime(),
+    cliDev,
     memory: {
       heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
       heapTotalMB: Math.round(mem.heapTotal / 1024 / 1024),
