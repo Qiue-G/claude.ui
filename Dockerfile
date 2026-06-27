@@ -15,7 +15,7 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install dependencies (includes node-pty)
+# Install dependencies
 RUN npm ci
 
 # Copy app files
@@ -23,37 +23,34 @@ COPY agent-config.json ./
 COPY src/ ./src/
 COPY vite.config.js svelte.config.js ./
 
-# Build frontend (creates public/ directory with production assets)
+# Build frontend
 RUN npm run build
 
-# Clone and build free-code
+# Clone and build free-code (cli-dev binary)
 RUN git clone https://github.com/paoloanzn/free-code.git /free-code \
     && cd /free-code \
     && bun install \
     && bun run build:dev:full \
+    && test -x /free-code/cli-dev || (echo "ERROR: cli-dev not found after build" && exit 1) \
     && chown -R appuser:appuser /free-code
 
-# Add OpenRouter proxy (translates Anthropic API format to OpenRouter)
+# Copy proxy
 COPY or_proxy.mjs /free-code/or_proxy.mjs
 
-# Create workspace directory
+# Create workspace
 RUN mkdir -p /workspace
 
-# Switch to non-root user
+# Switch to non-root
 USER appuser
 
-# Expose port
 EXPOSE 3000
 
-# Environment
 ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV WORKSPACE_DIR=/workspace
 ENV FREE_CODE_DIR=/free-code
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/api/health || exit 1
 
-# Start command
 CMD ["node", "src/server/index.js"]
