@@ -3,7 +3,7 @@ import { WebSocketServer } from 'ws';
 import cors from 'cors';
 import helmet from 'helmet';
 import { readFile, writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, accessSync, constants as fsConstants } from 'fs';
 import { join, resolve as pathResolve } from 'path';
 import { spawn } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
@@ -414,7 +414,7 @@ app.get('/api/health', (req, res) => {
   try {
     cliDev.exists = existsSync(cliPath);
     if (cliDev.exists) {
-      try { require('fs').accessSync(cliPath, require('fs').constants.X_OK); cliDev.executable = true; } catch(e) {}
+      try { accessSync(cliPath, fsConstants.X_OK); cliDev.executable = true; } catch(e) {}
     }
   } catch(e) { cliDev.error = e.message; }
   res.json({
