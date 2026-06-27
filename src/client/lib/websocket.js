@@ -258,6 +258,11 @@ export async function sendInput(data) {
     // Flush any remaining event
     if (dataLines.length > 0 || eventType !== 'message') {
       flushEvent();
+    } else {
+      // Empty stream: CLI produced zero output (likely cli-dev missing or crashed)
+      addMessage('system', 'CLI 进程无任何输出，请检查 /free-code/cli-dev 是否已正确部署');
+      isWaiting.set(false);
+      isTyping.set(false);
     }
   } catch (err) {
     console.error('sendInput error:', err);
@@ -328,3 +333,4 @@ function handleServerMessage(msg) {
       break;
   }
 }
+
