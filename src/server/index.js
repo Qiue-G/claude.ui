@@ -138,6 +138,15 @@ function stripAnsi(str) {
   return str;
 }
 
+function buildSafeEnv(extraVars = {}) {
+  const SAFE_KEYS = ['PATH', 'HOME', 'TMP', 'TEMP', 'NODE_PATH', 'APPDATA', 'LOCALAPPDATA', 'USERPROFILE'];
+  const safeEnv = {};
+  for (const key of SAFE_KEYS) {
+    if (process.env[key]) safeEnv[key] = process.env[key];
+  }
+  return { ...safeEnv, ...extraVars };
+}
+
 async function createSession(apiKey, model, provider) {
   const sessionId = uuidv4();
   const sessionToken = uuidv4();
@@ -199,7 +208,7 @@ async function startProxy(session) {
 
   const proxy = spawn('node', proxyArgs, {
     cwd: session.dir,
-    env: { ...process.env, ANTHROPIC_API_KEY: session.apiKey, NODE_ENV: 'production' },
+    env: buildSafeEnv({ ANTHROPIC_API_KEY: session.apiKey, NODE_ENV: 'production' }),
     stdio: ['pipe', 'pipe', 'pipe']
   });
 
