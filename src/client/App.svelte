@@ -127,10 +127,11 @@ import { getFileTree } from '$apis/files.api.js';
     }
   }
 
-  let sendTimeout = $state(null);
+  let sendTimeout = null;
 
-  $effect(() => {
-    if ($isWaiting) {
+  // 监听 isWaiting 状态实现 60s 超时
+  isWaiting.subscribe(val => {
+    if (val) {
       sendTimeout = setTimeout(() => {
         isWaiting.set(false);
         isTyping.set(false);
