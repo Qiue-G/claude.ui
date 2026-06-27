@@ -103,6 +103,17 @@ const sessionProxies = new Map(); // proxy processes
 const wsProcCount = new Map();    // active process count per session
 const sessionClients = new Map(); // sessionId → WebSocket (for model health push)
 
+function broadcast(sessionId, msg) {
+  const clients = sessionClients.get(sessionId);
+  if (!clients) return;
+  const payload = typeof msg === 'string' ? msg : JSON.stringify(msg);
+  clients.forEach(ws => {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(payload);
+    }
+  });
+}
+
 // ===== Per-model stream health stats =====
 const modelStats = new Map(); // modelId → { total, success, fail, lastOk, lastFail, lastError }
 
