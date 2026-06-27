@@ -100,6 +100,10 @@
       <ChatControls
         open={$controlsPanelOpen}
         on:close={() => controlsPanelOpen.set(false)}
+        on:change={(e) => {
+          const { id, enabled } = e.detail;
+          setToolEnabled(id, enabled);
+        }}
       />
       <ChatInput
         on:send={handleSend}
