@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+import { get } from 'svelte/store';
   import Toolbar from '$components/common/Toolbar.svelte';
   import FileTree from '$components/files/FileTree.svelte';
   import ChatPanel from '$components/chat/ChatPanel.svelte';
@@ -13,11 +14,13 @@
   import { activeModelId, savedModels } from '$stores/models.store.js';
   import { fileContents, fileTree } from '$stores/files.store.js';
   import { messages, isWaiting, isTyping, addMessage } from '$stores/chat.store.js';
+import { enabledTools, setToolEnabled } from '$stores/tools.store.js';
   import { initChatHistory, createSession } from '$stores/chatHistory.store.js';
   import { chatSidebarOpen, fileSidebarOpen, toggleChatSidebar, toggleFileSidebar, openCommandPalette, showToast } from '$stores/ui.store.js';
   import { toggleTheme } from '$stores/theme.store.js';
   import { connectWebSocket, sendInput } from '$lib/websocket.js';
   import { createSession as apiCreateSession } from '$apis/session.api.js';
+import { getFileTree } from '$apis/files.api.js';
   import { sessionId, sessionToken, csrfToken } from '$stores/session.store.js';
 
   let showConfigModal = $state(false);
@@ -92,6 +95,21 @@
   function handleSaveFile(e) {
     showToast('保存功能暂不可用', 'error');
   }
+
+  // ===== File loading =====
+
+  async function loadFileTree(sid, tok) {
+    try {
+      const result = await getFileTree(sid, tok);
+      if (result && result.tree) {
+        fileTree.set(result.tree);
+      }
+    } catch (err) {
+      console.error('loadFileTree failed:', err);
+    }
+  }
+
+  // ===== Handle connect =====
 
   async function handleConnectModel(e) {
     const model = e.detail;
